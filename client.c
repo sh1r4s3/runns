@@ -1,29 +1,29 @@
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stdlib.h>
+// Common definitions
+#include "runns.h"
 
-#define ERR(format, ...) \
-    { fprintf(stderr, "runns.c:%d / errno=%d / " format "\n", __LINE__, errno, ##__VA_ARGS__); \
-    exit(EXIT_FAILURE); }
-
-#define WARN(format, ...) \
-    fprintf(stderr, "runns.c:%d / errno=%d / " format "\n", __LINE__, errno, ##__VA_ARGS__)
 
 int
 main(int argc, char **argv)
 {
-  struct runns_header
-  {
-    int usersz;
-    int progsz;
-  } hdr;
+  struct runns_header hdr;
+  struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = "/tmp/runns.socket"};
+  const char *optstring = "h";
   char *username = "nik";
   char *program = "/usr/bin/ip";
-  struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = "/tmp/runns.socket"};
+  int opt;
+
+  while ((opt = getopt(argc, argv, optstring)) != -1)
+  {
+    switch (opt)
+    {
+      case 'h':
+        printf("help\n");
+        break;
+      default:
+        printf("default\n");
+    }
+  }
+  return 0;
 
   // Up socket
   int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
