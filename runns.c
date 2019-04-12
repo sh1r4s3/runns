@@ -2,6 +2,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <pwd.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -11,13 +13,11 @@
 #include <sched.h>
 
 #include <fcntl.h>
+#include <errno.h>
 
-void
-fail(const char *why, int status)
-{
-  fprintf(stderr, "ERROR: %s\n", why);
-  exit(status);
-}
+#define ERR(format, ...) \
+    fprintf(stderr, "runns.c:%d / errno=%d / " format "\n", __LINE__, errno, ##__VA_ARGS__); \
+    exit(1);
 
 int
 drop_priv(const char *username, struct passwd **pw)
@@ -27,28 +27,21 @@ drop_priv(const char *username, struct passwd **pw)
     uid_t uid = (*pw)->pw_uid;
     gid_t gid = (*pw)->pw_gid;
 
-    if (initgroups((*pw)->pw_name, gid) != 0) {
-      fprintf(stderr,
-              "Couldn't initialize the supplementary group list\n");
-      exit(1);
-    }
+    if (initgroups((*pw)->pw_name, gid) != 0)
+      ERR("Couldn't initialize the supplementary group list")
     endpwent();
 
     if (setgid(gid) != 0 || setuid(uid) != 0) {
-      fprintf(stderr, "Couldn't change to '%.32s' uid=%lu gid=%lu\n",
+      ERR("Couldn't change to '%.32s' uid=%lu gid=%lu",
              username,
              (unsigned long)uid,
-             (unsigned long)gid);
-      fail("Set UID/GID failed", 1);
+             (unsigned long)gid)
     }
     else
       fprintf(stderr, "dropped privs to %s\n", username);
   }
-  else {
-    fprintf(stderr, "Couldn't find user '%.32s'\n",
-            username);
-    exit(1);
-  }
+  else
+    ERR("Couldn't find user '%.32s'", username);
 }
 
 int
@@ -63,7 +56,7 @@ main(int argc, char **argv)
   // fork
   pid_t child = fork();
   if (child == -1)
-    fail("Can't create child", -1);
+    ERR("Fail on fork")
 
   if (child != 0) {
     int netfd = open("/var/run/netns/blue", 0);
