@@ -1,3 +1,4 @@
+//TODO: deal with ret err
 // Common definitions
 #include "runns.h"
 
@@ -10,6 +11,7 @@ struct option opts[] =
   { .name = "verbose", .has_arg = 0, .flag = 0, .val = 'v' },
   { .name = "stop", .has_arg = 0, .flag = 0, .val = 's' },
   { .name = "force-stop", .has_arg = 0, .flag = 0, .val = 'f' },
+  { .name = "list", .has_arg = 0, .flag = 0, .val = 'l' },
   { 0, 0, 0, 0 }
 };
 
@@ -20,10 +22,11 @@ help_me()
 {
   const char *hstr = "client [options]\n" \
                      "Options:\n" \
+                     "-h|--help\thelp\n" \
                      "-s|--stop\tstop daemon\n" \
                      "-f|--force-stop\tforce stop daemon (don't wait childs)\n" \
+                     "-l|--list\tlist childs\n" \
                      "-u|--username\tusername to switch\n" \
-                     "-h|--help\thelp\n" \
                      "-n|--netns\tnetwork namespace to switch\n" \
                      "-p|--program\tprogram to run in desired netns\n" \
                      "-v|--verbose\tbe verbose\n";
@@ -38,7 +41,7 @@ main(int argc, char **argv)
   struct runns_header hdr = {0};
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = defsock};
   const char *user = 0, *prog = 0, *netns = 0;
-  const char *optstring = "hu:n:p:vfs";
+  const char *optstring = "hu:n:p:vfsl";
   int opt;
   char verbose = 0;
 
@@ -56,10 +59,13 @@ main(int argc, char **argv)
         help_me();
         break;
       case 's':
-        hdr.stopbit = RUNNS_STOP;
+        hdr.flag ^= RUNNS_STOP;
         break;
       case 'f':
-        hdr.stopbit = RUNNS_FORCE_STOP;
+        hdr.flag ^= RUNNS_FORCE_STOP;
+        break;
+      case 'l':
+        hdr.flag ^= RUNNS_LIST;
         break;
       case 'u':
         user = optarg;
@@ -82,11 +88,11 @@ main(int argc, char **argv)
   }
 
   // Not allow empty strings
-  if (!hdr.stopbit && (!user || !netns || !prog))
+  if (!hdr.flag && (!user || !netns || !prog))
     ERR(0, "client.c", "Please check that you set username, network namespace and program");
 
   // Output parameters in the case of verbose option
-  if (verbose && !hdr.stopbit)
+  if (verbose && !hdr.flag)
   {
     printf("user name to switch is: %s\n" \
            "network namespace to switch is: %s\n" \
@@ -109,9 +115,22 @@ main(int argc, char **argv)
     ERR(sockfd, "client.c", "Can't connect");
 
   write(sockfd, (void *)&hdr, sizeof(hdr));
-  if (hdr.stopbit)
+  // Stop daemon
+  if (hdr.flag <= (RUNNS_FORCE_STOP & RUNNS_STOP))
     goto _exit;
-
+  // Print list of childs and exit
+  if (hdr.flag & RUNNS_LIST)
+  {
+    int childs_run;
+    struct runns_child child;
+    read(sockfd, (void *)&childs_run, sizeof(childs_run));
+    for (int i = 0; i < childs_run; i++)
+    {
+      read(sockfd, (void *)&child, sizeof(child));
+      printf("%d [%d] %s\n", i, (int)child.pid, child.name);
+    }
+    return EXIT_SUCCESS;
+  }
 
   write(sockfd, (void *)user, hdr.user_sz);
   write(sockfd, (void *)prog, hdr.prog_sz);

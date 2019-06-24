@@ -3,21 +3,21 @@
 #include <pwd.h>
 #include <grp.h>
 
-#include "runns.h"
 #include <fcntl.h>
+#include "runns.h"
 
 #define __USE_GNU
 #include <sched.h>
 
 int sockfd;
-pid_t *childs_pid = 0;
+struct runns_child *childs;
 size_t childs_run = 0;
 
 int
 drop_priv(const char *username, struct passwd **pw);
 
 void
-stop_daemon(int stopbit);
+stop_daemon(int flag);
 
 int
 main(int argc, char **argv)
@@ -47,7 +47,9 @@ main(int argc, char **argv)
   chown(addr.sun_path, 0, group->gr_gid);
   chmod(addr.sun_path, 0775);
 
-  daemon(0, 0);
+ // if (!daemon(0, 0))
+  //  perror(0);
+
   while (1)
   {
     if (listen(sockfd, 16) == -1)
@@ -62,10 +64,21 @@ main(int argc, char **argv)
       WARN("Can't read data");
 
     // Stop daemon on demand.
-    if (hdr.stopbit)
+    if (hdr.flag & (RUNNS_STOP & RUNNS_FORCE_STOP))
     {
+      puts("Closing");
       close(data_sockfd);
-      stop_daemon(hdr.stopbit);
+      stop_daemon(hdr.flag);
+    }
+    // Transfer list of childs
+    if (hdr.flag & RUNNS_LIST)
+    { // TODO rets
+      write(data_sockfd, (void *)&childs_run, sizeof(childs_run));
+      for (int i = 0; i < childs_run; i++)
+      {
+        write(data_sockfd, (void *)&childs[i], sizeof(struct runns_child));
+      }
+      continue;
     }
 
     // Read username, program name and network namespace name
@@ -101,13 +114,16 @@ main(int argc, char **argv)
       int netfd = open(netns, 0);
       setns(netfd, CLONE_NEWNET);
       drop_priv(username, &pw);
+      // TODO sigaction
+//      signal(SIGHUP, SIG_IGN);
       if (execve(program, 0, (char * const *)envs) == -1)
         perror(0);
     }
 
     // Save child.
-    childs_pid = realloc(childs_pid, sizeof(pid_t)*(childs_run + 1));
-    childs_pid[childs_run++] = child;
+    childs = realloc(childs, sizeof(struct runns_child)*(++childs_run));
+    childs[childs_run].pid = child;
+    childs[childs_run].name = program;
   }
 
   return 0;
@@ -139,26 +155,26 @@ drop_priv(const char *username, struct passwd **pw)
 }
 
 void
-stop_daemon(int stopbit)
+stop_daemon(int flag)
 {
-  switch (stopbit)
+  if (flag & RUNNS_FORCE_STOP)
   {
-    case RUNNS_STOP:
-      for (pid_t i = 0; i < childs_run; i++)
-      {
-        int wstatus;
-        int pid = childs_pid[i];
-        if (waitpid(pid, &wstatus, 0) < 0)
-          WARN("Can't wait for child with PID %u", pid);
-        else if (!WIFEXITED(wstatus))
-          WARN("Child terminated with error, exit code: %u", WEXITSTATUS(wstatus));
-      }
-      free(childs_pid);
-    case RUNNS_FORCE_STOP:
-      close(sockfd);
-      unlink(defsock);
-      rmdir(RUNNS_DIR);
-      exit(stopbit & RUNNS_NORMALIZE);
-      break;
+    close(sockfd);
+    unlink(defsock);
+    rmdir(RUNNS_DIR);
+    exit(flag & RUNNS_NORMALIZE);
+  }
+  else
+  {
+    for (pid_t i = 0; i < childs_run; i++)
+    {
+      int wstatus;
+      int pid = childs[i].pid;
+      if (waitpid(pid, &wstatus, 0) < 0)
+        WARN("Can't wait for child with PID %u", pid);
+      else if (!WIFEXITED(wstatus))
+        WARN("Child terminated with error, exit code: %u", WEXITSTATUS(wstatus));
+    }
+    free(childs);
   }
 }
