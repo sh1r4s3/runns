@@ -2,6 +2,12 @@
 // Common definitions
 #include "runns.h"
 
+// Emit error message and exit
+#define ERR(format, ...) \
+      fprintf(stderr, "client.c:%d / errno=%d / " format "\n", __LINE__, errno, ##__VA_ARGS__); \
+      ret = EXIT_FAILURE;
+
+
 struct option opts[] =
 {
   { .name = "help", .has_arg = 0, .flag = 0, .val = 'h' },
@@ -44,11 +50,13 @@ main(int argc, char **argv)
   const char *optstring = "hu:n:p:vfsl";
   int opt;
   char verbose = 0;
+  int sockfd = 0;
+  int ret = EXIT_SUCCESS;
 
   if (argc <= 1)
   {
-    printf("For the help message try: client --help\n");
-    return EXIT_FAILURE;
+    ERR("For the help message try: client --help");
+    goto _exit;
   }
 
   while ((opt = getopt_long(argc, argv, optstring, opts, 0)) != -1)
@@ -59,13 +67,13 @@ main(int argc, char **argv)
         help_me();
         break;
       case 's':
-        hdr.flag ^= RUNNS_STOP;
+        hdr.flag |= RUNNS_STOP;
         break;
       case 'f':
-        hdr.flag ^= RUNNS_FORCE_STOP;
+        hdr.flag |= RUNNS_FORCE_STOP;
         break;
       case 'l':
-        hdr.flag ^= RUNNS_LIST;
+        hdr.flag |= RUNNS_LIST;
         break;
       case 'u':
         user = optarg;
@@ -83,13 +91,17 @@ main(int argc, char **argv)
         verbose = 1;
         break;
       default:
-        ERR(0, "client.c", "How did you do that? 0x%X %c", opt, (char)opt);
+        ERR("Wrong option: %c", (char)opt);
+        goto _exit;
     }
   }
 
   // Not allow empty strings
   if (!hdr.flag && (!user || !netns || !prog))
-    ERR(0, "client.c", "Please check that you set username, network namespace and program");
+  {
+    ERR("Please check that you set username, network namespace and program");
+    goto _exit;
+  }
 
   // Output parameters in the case of verbose option
   if (verbose && !hdr.flag)
@@ -108,15 +120,21 @@ main(int argc, char **argv)
   }
 
   // Up socket
-  int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+  sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sockfd == -1)
-    ERR(sockfd, "client.c", "Something gone very wrong, socket = %d", sockfd);
+  {
+    ERR("Something gone very wrong, socket = %d", sockfd);
+    goto _exit;
+  }
   if (connect(sockfd, (const struct sockaddr *)&addr, sizeof(addr)) == -1)
-    ERR(sockfd, "client.c", "Can't connect");
+  {
+    ERR("Can't connect to runns daemon");
+    goto _exit;
+  }
 
   write(sockfd, (void *)&hdr, sizeof(hdr));
   // Stop daemon
-  if (hdr.flag <= (RUNNS_FORCE_STOP & RUNNS_STOP))
+  if (hdr.flag <= (RUNNS_FORCE_STOP | RUNNS_STOP))
     goto _exit;
   // Print list of childs and exit
   if (hdr.flag & RUNNS_LIST)
@@ -129,7 +147,7 @@ main(int argc, char **argv)
       read(sockfd, (void *)&child, sizeof(child));
       printf("%d [%d] %s\n", i, (int)child.pid, child.name);
     }
-    return EXIT_SUCCESS;
+    goto _exit;
   }
 
   write(sockfd, (void *)user, hdr.user_sz);
@@ -150,6 +168,6 @@ main(int argc, char **argv)
   write(sockfd, &eof, sizeof(int));
 
 _exit:
-  close(sockfd);
-  return EXIT_SUCCESS;
+  if (sockfd) close(sockfd);
+  return ret;
 }
