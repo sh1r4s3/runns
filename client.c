@@ -134,7 +134,7 @@ main(int argc, char **argv)
 
   write(sockfd, (void *)&hdr, sizeof(hdr));
   // Stop daemon
-  if (hdr.flag <= (RUNNS_FORCE_STOP | RUNNS_STOP))
+  if (hdr.flag >= (RUNNS_FORCE_STOP | RUNNS_STOP))
     goto _exit;
   // Print list of childs and exit
   if (hdr.flag & RUNNS_LIST)

@@ -82,7 +82,7 @@ main(int argc, char **argv)
     // Stop daemon on demand.
     if (hdr.flag & (RUNNS_STOP | RUNNS_FORCE_STOP))
     {
-      puts("Closing");
+      INFO("closing");
       close(data_sockfd);
       stop_daemon(hdr.flag);
     }
@@ -104,6 +104,7 @@ main(int argc, char **argv)
     ret = read(data_sockfd, (void *)username, hdr.user_sz);
     ret = read(data_sockfd, (void *)program, hdr.prog_sz);
     ret = read(data_sockfd, (void *)netns, hdr.netns_sz);
+    INFO("username=%s program=%s netns=%s", username, program, netns);
 
     // Read environment variables
     envs = (char **)malloc(++hdr.env_sz*sizeof(char *));
@@ -113,7 +114,6 @@ main(int argc, char **argv)
       ret = read(data_sockfd, (void *)&env_sz, sizeof(size_t));
       envs[i] = (char *)malloc(env_sz);
       ret = read(data_sockfd, (void *)envs[i], env_sz);
-      puts(envs[i]);
     }
     envs[hdr.env_sz - 1] = 0;
 
@@ -129,7 +129,7 @@ main(int argc, char **argv)
     {
       int netfd = open(netns, 0);
       setns(netfd, CLONE_NEWNET);
-      signal(SIGHUP, SIG_IGN);
+    //  signal(SIGHUP, SIG_IGN);
       drop_priv(username, &pw);
       if (execve(program, 0, (char * const *)envs) == -1)
         perror(0);
