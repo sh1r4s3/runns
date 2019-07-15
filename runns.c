@@ -137,8 +137,8 @@ main(int argc, char **argv)
 
     // Save child.
     childs = realloc(childs, sizeof(struct runns_child)*(++childs_run));
-    childs[childs_run].pid = child;
-    childs[childs_run].name = program;
+    childs[childs_run - 1].pid = child;
+    childs[childs_run - 1].name = program;
   }
 
   return 0;
