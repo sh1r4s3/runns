@@ -44,7 +44,10 @@ main(int argc, char **argv)
   char **envs;
   struct runns_header hdr;
 
-  // Set safe permissions and create directory.
+  if (daemon(0, 0))
+    ERR("Can't daemonize the process");
+
+  // Set safe umask and create directory.
   umask(0022);
   if (mkdir(RUNNS_DIR, 0755) < 0)
     ERR("Can't create directory %s", RUNNS_DIR);
@@ -55,14 +58,13 @@ main(int argc, char **argv)
     ERR("Something gone very wrong, socket = %d", sockfd);
   if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
     ERR("Can't bind socket to %s", addr.sun_path);
-
+  // Switch permissions and group.
   struct group *group;
-  group = getgrnam("users");
+  group = getgrnam("runns");
+  if (!group)
+    ERR("Can't get runns group\n");
   chown(addr.sun_path, 0, group->gr_gid);
   chmod(addr.sun_path, 0775);
-
-  if (!daemon(0, 0))
-    perror(0);
 
   INFO("runns daemon has started");
 
