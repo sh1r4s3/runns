@@ -1,5 +1,4 @@
 CC=gcc
-CPPFLAGS=-g
 DAEMON=runns
 CLIENT=runnsctl
 
