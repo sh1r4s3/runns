@@ -127,13 +127,19 @@ main(int argc, char **argv)
     // Child
     if (child == 0)
     {
+      // Detach child from parent
+      setsid();
+      child = fork();
+      if (child != 0)
+        exit(0);
       int netfd = open(netns, 0);
       setns(netfd, CLONE_NEWNET);
-    //  signal(SIGHUP, SIG_IGN);
       drop_priv(username, &pw);
       if (execve(program, 0, (char * const *)envs) == -1)
         perror(0);
     }
+    else
+      waitpid(child, 0, 0);
 
     // Save child.
     childs = realloc(childs, sizeof(struct runns_child)*(++childs_run));
