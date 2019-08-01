@@ -44,9 +44,9 @@ pids="$(ip netns pids "$NS")"
 if [ "$(ip netns pids "$NS")" != "" ]
 then
     echo -ne "WARNING: $NS has follwing PIDs:\n$pids\n"
-    echo -ne "Do you want to kill automatically or manually?\n(y/n) > "
+    echo -ne "Do you want to kill automatically or manually?\n(a/m) > "
     read KILL
-    if [ "$KILL" = "y" ]
+    if [ "$KILL" = "a" ]
     then
         for i in $pids
         do
