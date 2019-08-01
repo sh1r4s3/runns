@@ -13,7 +13,7 @@ Options:
   -n | --name              namespace name
   -f | --disable-forward   disable IPv4 forwarding
 EOF
-    exit
+    exit 0
 }
 
 [ $# -ge 1 ] || help
@@ -39,9 +39,36 @@ do
     shift
 done
 
-IPT=$(ip netns exec "$NS" ip route | awk '/^172\.0.*eth0/{print $1}')
+# Check PIDs
+pids="$(ip netns pids "$NS")"
+if [ "$(ip netns pids "$NS")" != "" ]
+then
+    echo -ne "WARNING: $NS has follwing PIDs:\n$pids\n"
+    echo -ne "Do you want to kill automatically or manually?\n(y/n) > "
+    read KILL
+    if [ "$KILL" = "y" ]
+    then
+        for i in $pids
+        do
+            kill $pids
+        done
+        sleep 1
+        if [ "$(ip netns pids "$NS")" != "" ]
+        then
+            echo "Can't kill all PIDs. Exit."
+            exit 1
+        fi
+    else
+        exit 0
+    fi
+fi
 
+# Get ip route
+IPT=$(ip netns exec "$NS" ip route | awk '/^172\.0.*eth0/{print $1}')
+# Delete network namespace and NAT rule
 ip netns del "$NS"
 iptables -t nat -D POSTROUTING -s "$IPT" -o eth0 -j MASQUERADE
-
+# Delete resolv.conf setup
+[ -d "/etc/netns/$NS" ] && rm -rf "/etc/netns/$NS"
+# Disable IPv4 forward
 [ -z "${DISABLE_FORWARD-}" ] || echo "0" > /proc/sys/net/ipv4/ip_forward
