@@ -9,17 +9,18 @@ ${0##*/} -- create network namespace for runns.
 Usage: ${0##*/} [options]
 
 Options:
-  -h | --help    print this help message
-  -n | --name    namespace name (default is "vpnX", where X is a number)
-  -i | --int     interface name (default is "eth0")
-  -o | --out     interface name for veth in default network namespace
-                 (default is "vpnX", where X is a number)
+  -h | --help     print this help message
+  -n | --name     namespace name (default is "vpnX", where X is a number)
+  -i | --int      interface name (default is "eth0")
+  -o | --out      interface name for veth in default network namespace
+                  (default is "vpnX", where X is a number)
+  -r | --resolve  path to resolv.conf file for this network namespace
 EOF
-    exit
+    exit 0
 }
 
 # Parse command line arguments
-TMPARGS="$(getopt -n "$0" -o n:,i:,o:,h -l name:,int:,out:,help -- "$@")" ||
+TMPARGS="$(getopt -n "$0" -o n:,i:,o:,r:,h -l name:,int:,out:,resolve:,help -- "$@")" ||
 	  help
 eval set -- "$TMPARGS"
 
@@ -37,6 +38,8 @@ do
             shift; INT="$1" ;;
         -o|--out)
             shift; OUT="$1" ;;
+        -r|--resolve)
+            shift; RESOLVE="$1" ;;
         *)
             help ;;
     esac
@@ -63,6 +66,7 @@ Using following options:
 - Network namespace: $NS
 - Network interface: $OUT
 - IPv4 address for ${NS}d: 172.0.${IP4C}.1/24
+- resolv.conf: ${RESOLVE:-using default}
 EOF
 
 # Add network namespace and interfaces
@@ -85,6 +89,12 @@ echo "1" > /proc/sys/net/ipv4/ip_forward
 # Add NAT rule
 iptables -t nat -A POSTROUTING -s 172.0.${IP4C}.0/24 -o "$INT" -j MASQUERADE
 echo "NAT rule is ready"
+# Setup resolv.conf for this network namespace
+if [ -n "${RESOLVE-}" ]
+then
+    [ -d "/etc/netns/$NS" ] || mkdir -p "/etc/netns/$NS"
+    [ ! -f "$RESOLVE" ] || cp "$RESOLVE" "/etc/netns/$NS"
+fi
 
 # One should add this rules in the case of restricted netfilter setup (all DROP)
 # iptables -A FORWARD -i eth0 -o vpn0 -j ACCEPT
