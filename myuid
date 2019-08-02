@@ -1,6 +1,0 @@
-#!/bin/sh
-
-echo UID = ${UID-}
-echo EUID = ${EUID-}
-echo GID = ${GID-}
-echo EGUD = ${EGID-}
