@@ -1,6 +1,7 @@
 #ifndef RUNNS_H
 #define RUNNS_H
 
+#define __USE_GNU
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -18,16 +19,13 @@
 
 // Definitions of the stop bits:
 // RUNNS_STOP -- wait for childs to exit and then exit.
-// RUNNS_FORCE_STOP -- do not wait for childs, just exit.
 // RUNNS_LIST -- list childs runned by runns
-#define RUNNS_STOP 0x1
-#define RUNNS_FORCE_STOP 0x2
-#define RUNNS_LIST 0x4
+#define RUNNS_STOP (int)1 << 1
+#define RUNNS_LIST (int)1 << 2
 
 // common header for server and client
 struct runns_header
 {
-  size_t user_sz;
   size_t prog_sz;
   size_t netns_sz;
   size_t env_sz;
@@ -36,7 +34,7 @@ struct runns_header
 
 struct runns_child
 {
+  uid_t uid;
   pid_t pid;
-  const char *name;
 };
 #endif
