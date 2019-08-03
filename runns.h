@@ -17,6 +17,9 @@
 #define RUNNS_DIR "/var/run/runns/"
 #define defsock RUNNS_DIR "runns.socket"
 
+// Maximum number of childs
+#define MAX_CHILDS 1024
+
 // Definitions of the stop bits:
 // RUNNS_STOP -- wait for childs to exit and then exit.
 // RUNNS_LIST -- list childs runned by runns

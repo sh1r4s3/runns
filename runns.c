@@ -140,36 +140,41 @@ main(int argc, char **argv)
 
     close(data_sockfd);
 
-    // Make fork
-    pid_t child = fork();
-    if (child == -1)
-      ERR("Fail on fork");
-
-    // Child
-    if (child == 0)
+    if (childs_run < MAX_CHILDS)
     {
-      // Detach child from parent
-      setsid();
-      child = fork();
-      if (child != 0)
+      // Make fork
+      pid_t child = fork();
+      if (child == -1)
+        ERR("Fail on fork");
+
+      // Child
+      if (child == 0)
       {
-        *glob_pid = child;
-        exit(0);
+        // Detach child from parent
+        setsid();
+        child = fork();
+        if (child != 0)
+        {
+          *glob_pid = child;
+          exit(0);
+        }
+        int netfd = open(netns, 0);
+        setns(netfd, CLONE_NEWNET);
+        drop_priv(cred.uid, &pw);
+        if (execve(program, 0, (char * const *)envs) == -1)
+          perror(0);
       }
-      int netfd = open(netns, 0);
-      setns(netfd, CLONE_NEWNET);
-      drop_priv(cred.uid, &pw);
-      if (execve(program, 0, (char * const *)envs) == -1)
-        perror(0);
+      else
+        waitpid(child, 0, 0);
+
+      // Save child.
+      INFO("Forked %d", *glob_pid);
+      childs = realloc(childs, sizeof(struct runns_child)*(++childs_run));
+      childs[childs_run - 1].uid = cred.uid;
+      childs[childs_run - 1].pid = *glob_pid;
     }
     else
-      waitpid(child, 0, 0);
-
-    // Save child.
-    INFO("Forked %d", *glob_pid);
-    childs = realloc(childs, sizeof(struct runns_child)*(++childs_run));
-    childs[childs_run - 1].uid = cred.uid;
-    childs[childs_run - 1].pid = *glob_pid;
+      INFO("Maximum number of childs has been reached.");
   }
 
   return 0;
