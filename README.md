@@ -25,10 +25,11 @@ This is a main daemon. This daemon opens an UNIX socket in `/var/run/runns/runns
 ### runnsctl
 This is a client for **runns** daemon. It allows to run a program inside the specified network namespace.
 It will copy all user shell environment variables and program path to the daemon.
+To add argv to the program enter them after the '--': `./runnsctl --program foo -- --arg1 --arg2=bar`.
 
-For example, to run a *chromium* inside the *foo* network namespace one could run:
+For example, to run a *chromium* inside the *foo* network namespace with temporary profile one could run:
 
-`./runnsctl --program /usr/bin/chromium --netns /var/run/netns/foo`
+`./runnsctl --program /usr/bin/chromium --netns /var/run/netns/foo -- --temp-profile`
 
 To stop the daemon:
 
