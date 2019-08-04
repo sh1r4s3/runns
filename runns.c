@@ -74,8 +74,11 @@ main(int argc, char **argv)
   group = getgrnam("runns");
   if (!group)
     ERR("Can't get runns group\n");
-  chown(addr.sun_path, 0, group->gr_gid);
-  chmod(addr.sun_path, 0775);
+  if (chown(addr.sun_path, 0, group->gr_gid) ||
+      chmod(addr.sun_path, 0775))
+  {
+    ERR("Can't chown/chmod");
+  }
 
   INFO("runns daemon has started");
 
@@ -120,10 +123,12 @@ main(int argc, char **argv)
           ++jobs;
       }
         
-      write(data_sockfd, (void *)&jobs, sizeof(jobs));
+      if (write(data_sockfd, (void *)&jobs, sizeof(jobs)) == -1)
+        ERR("Can't send number of jobs to the client %d", cred.uid);
       for (unsigned int i = 0; i < jobs; i++)
       {
-        write(data_sockfd, (void *)&childs[i], sizeof(struct runns_child));
+        if (write(data_sockfd, (void *)&childs[i], sizeof(struct runns_child)) == -1)
+          ERR("Can't send child info to the client %d", cred.uid);
       }
       close(data_sockfd);
       continue;

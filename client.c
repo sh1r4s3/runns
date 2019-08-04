@@ -120,7 +120,8 @@ main(int argc, char **argv)
   // Calculate number of non-options
   hdr.args_sz = argc - optind;
 
-  write(sockfd, (void *)&hdr, sizeof(hdr));
+  if (write(sockfd, (void *)&hdr, sizeof(hdr)) == -1)
+    ERR("Can't send header to the daemon");
   // Stop daemon
   if (hdr.flag & RUNNS_STOP)
     goto _exit;
@@ -129,25 +130,33 @@ main(int argc, char **argv)
   {
     unsigned int childs_run;
     struct runns_child child;
-    read(sockfd, (void *)&childs_run, sizeof(childs_run));
+    if (read(sockfd, (void *)&childs_run, sizeof(childs_run)) == -1)
+      ERR("Can't read number of childs from the daemon");
     for (int i = 0; i < childs_run; i++)
     {
-      read(sockfd, (void *)&child, sizeof(child));
+      if (read(sockfd, (void *)&child, sizeof(child)) == -1)
+        ERR("Can't read child info from the daemon");
       printf("%d) pid=%d\n", i, child.pid);
     }
     goto _exit;
   }
 
-  write(sockfd, (void *)prog, hdr.prog_sz);
-  write(sockfd, (void *)netns, hdr.netns_sz);
+  if (write(sockfd, (void *)prog, hdr.prog_sz) == -1 ||
+      write(sockfd, (void *)netns, hdr.netns_sz) == -1)
+  {
+    ERR("Can't send program name or network namespace name to the daemon");
+  }
   // Transfer argv
   if (hdr.args_sz > 0)
   {
     for (int i = optind; i < argc; i++)
     {
       size_t sz = strlen(argv[i]) + 1; // strlen + \0
-      write(sockfd, (void *)&sz, sizeof(size_t));
-      write(sockfd, (void *)argv[i], sz);
+      if (write(sockfd, (void *)&sz, sizeof(size_t)) == -1 ||
+          write(sockfd, (void *)argv[i], sz) == -1)
+      {
+        ERR("Can't send argv to the daemon");
+      }
     }
   }
 
@@ -157,14 +166,19 @@ main(int argc, char **argv)
     if (environ[i][0] != '_' && environ[i][1] != '=')
     {
       size_t sz = strlen(environ[i]) + 1; // strlen + \0
-      write(sockfd, (void *)&sz, sizeof(size_t));
-      write(sockfd, (void *)environ[i], sz);
+      if (write(sockfd, (void *)&sz, sizeof(size_t)) == -1 ||
+          write(sockfd, (void *)environ[i], sz) == -1)
+      {
+        ERR("Can't send envs to the daemon");
+      }
     }
   }
   int eof = 0;
-  write(sockfd, &eof, sizeof(int));
+  if (write(sockfd, &eof, sizeof(int)) == -1)
+    ERR("Can't send EOF to the daemon");
 
 _exit:
-  if (sockfd) close(sockfd);
+  if (sockfd)
+    close(sockfd);
   return ret;
 }
