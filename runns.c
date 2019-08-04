@@ -24,7 +24,7 @@
       syslog(LOG_INFO | LOG_DAEMON, "runns.c:%d / info / " format "\n", __LINE__, ##__VA_ARGS__);
 
 int sockfd;
-struct runns_child *childs;
+struct runns_child childs[MAX_CHILDS];
 unsigned int childs_run = 0;
 
 int
@@ -32,6 +32,9 @@ drop_priv(uid_t _uid, struct passwd **pw);
 
 void
 stop_daemon(int flag);
+
+int
+clean_pids();
 
 int
 main(int argc, char **argv)
@@ -103,6 +106,7 @@ main(int argc, char **argv)
     if (hdr.flag & RUNNS_LIST)
     { // TODO rets
       INFO("uid=%d ask for pid list", cred.uid);
+      clean_pids();
       // Count the number of jobs for uid
       unsigned int jobs = 0;
       for (int i = 0; i < childs_run; i++)
@@ -140,6 +144,7 @@ main(int argc, char **argv)
 
     close(data_sockfd);
 
+    clean_pids();
     if (childs_run < MAX_CHILDS)
     {
       // Make fork
@@ -169,9 +174,9 @@ main(int argc, char **argv)
 
       // Save child.
       INFO("Forked %d", *glob_pid);
-      childs = realloc(childs, sizeof(struct runns_child)*(++childs_run));
-      childs[childs_run - 1].uid = cred.uid;
-      childs[childs_run - 1].pid = *glob_pid;
+      childs[childs_run].uid = cred.uid;
+      childs[childs_run].pid = *glob_pid;
+      ++childs_run;
     }
     else
       INFO("Maximum number of childs has been reached.");
@@ -211,7 +216,6 @@ stop_daemon(int flag)
   INFO("runns daemon going down");
   if (sockfd)
   {
-    free(childs);
     close(sockfd);
     unlink(defsock);
     rmdir(RUNNS_DIR);
@@ -219,4 +223,20 @@ stop_daemon(int flag)
 
   int ret = flag ? flag & RUNNS_STOP : EXIT_FAILURE;
   exit(ret);
+}
+
+int
+clean_pids()
+{
+  for (unsigned int i = childs_run; i > 0 ; i--)
+  {
+    if (kill(childs[i - 1].pid, 0))
+    {
+      if (i != childs_run)
+      {
+        memcpy(childs + childs_run - 1, childs + i - 1, sizeof(struct runns_child));
+      }
+      --childs_run;
+    }
+  }
 }
