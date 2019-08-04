@@ -1,0 +1,36 @@
+CC=@CC@
+LD=@CC@
+PREFIX=@prefix@
+
+CFLAGS=@CFLAGS@
+DAEMON=runns
+CLIENT=runnsctl
+HELPER=build-net clean-net
+_ := $() $()
+comma := ,
+
+all: $(DAEMON) $(CLIENT)
+
+$(DAEMON): runns.o
+	$(CC) -o $@ $<
+
+$(CLIENT): client.o
+	$(CC) -o $@ $<
+
+.PHONY: client
+clean:
+	rm -f $(DAEMON) $(CLIENT) *.o
+
+.PHONY: install
+install: $(DAEMON) $(CLIENT) $(HELPER)
+	mkdir -p $(DESTDIR)/$(PREFIX)/bin
+	cp {$(subst $(_),$(comma),$^)} $(DESTDIR)/$(PREFIX)/bin/
+	chmod 755 $(DESTDIR)/$(PREFIX)/bin/{$(subst $(_),$(comma),$^)}
+
+.PHONY: uninstall
+uninstall: $(CLIENT) $(DAEMON) $(HELPER)
+	rm -f $(DESTDIR)/$(PREFIX)/bin/{$(subst $(_),$(comma),$^)}
+
+.PHONY: distclean
+distclean:
+	rm -vrf $(DAEMON) $(CLIENT) *.o Makefile autom4te.cache config.log config.status
