@@ -14,8 +14,16 @@ To build and run this project one need to have at least the following things:
 * iptables [7]
 * iproute2 [8]
 * gawk [9]
+* autoconf [10]
 
-To build the binaries just run `make` inside your project directory.
+The building procedure is straight forward:
+
+* Run autoconf in the source directory to get configure script: `$ autoconf`.
+* Conifgure: `$ ./configure`.
+* Build program with GNU make: `$ make`
+* Install: `$ make install`
+* To uninstall use the following command: `$ make uninstall`
+
 The **runns** daemon will create a socket for communication with clients.
 Communication with this socket allowed only for users in the *runns* group.
 * Create *runns* group: `groupadd runns`
@@ -25,23 +33,23 @@ This is a main daemon. This daemon opens an UNIX socket in `/var/run/runns/runns
 ### runnsctl
 This is a client for **runns** daemon. It allows to run a program inside the specified network namespace.
 It will copy all user shell environment variables and program path to the daemon.
-To add argv to the program enter them after the '--': `./runnsctl --program foo -- --arg1 --arg2=bar`.
+To add argv to the program enter them after the '--': `runnsctl --program foo -- --arg1 --arg2=bar`.
 
 For example, to run a *chromium* inside the *foo* network namespace with temporary profile one could run:
 
-`./runnsctl --program /usr/bin/chromium --netns /var/run/netns/foo -- --temp-profile`
+`runnsctl --program /usr/bin/chromium --netns /var/run/netns/foo -- --temp-profile`
 
 To stop the daemon:
 
-`./runnsctl --stop`
+`runnsctl --stop`
 
 To list PIDs runned by the user:
 
-`./runnsctl --list`
+`runnsctl --list`
 
 The other options could been seen with following command:
 
-`./runnsctl --help`
+`runnsctl --help`
 
 ### build-net
 This helper script allow user to easy create a network namespace.
@@ -65,33 +73,33 @@ it was mentioned in the command line arguments. The script will also automatical
 This helper script is needed to easy delete and clean network namespace created by **build-net**.
 This script will check if any program is running inside the network namespace and if so it will ask to try
 to kill them all automatically.
-Please check the options before use: `./clean-net --help`.
+Please check the options before use: `clean-net --help`.
 
 ### Example use-case
 
 From **root** user:
 
 ```shell
-root$ ./build-net
-root$ ip netns exec vpn1 openvpn /etc/openvpn/config
-root$ ./runns
+root$ build-net
+root$ ip netns exec vpn1 openvpn /etc/openvpn/config &
+root$ runns
 ```
 
 From **iddqd** user:
 ```shell
-iddqd$ ./runnsctl --program /usr/bin/chromium --netns /var/run/netns/vpn1
+iddqd$ runnsctl --program /usr/bin/chromium --netns /var/run/netns/vpn1
 ...
-iddqd$ ./runnsctl -s
+iddqd$ runnsctl -s
 ```
 
 To clean-up:
 ```shell
-root$ ./clean-net --name vpn1 -f
+root$ clean-net --name vpn1 -f
 ```
 
 ## Acknowledgement
 
-Thanks for the nice font [10] by Amazingmax which is used in the logo.
+Thanks for the nice font [11] by Amazingmax which is used in the logo.
 
 ## Refs
 1 -- https://lwn.net/Articles/580893
@@ -112,4 +120,6 @@ Thanks for the nice font [10] by Amazingmax which is used in the logo.
 
 9 -- https://www.gnu.org/software/gawk
 
-10 -- https://fonts2u.com/amazdoomright.font
+10 -- https://www.gnu.org/software/autoconf
+
+11 -- https://fonts2u.com/amazdoomright.font
