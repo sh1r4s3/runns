@@ -49,7 +49,7 @@ main(int argc, char **argv)
 
   if (argc <= 1)
   {
-    ERR("For the help message try: client --help");
+    ERR("For the help message try: runnsctl --help");
     goto _exit;
   }
 

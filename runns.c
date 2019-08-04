@@ -23,8 +23,9 @@
 #define INFO(format, ...) \
       syslog(LOG_INFO | LOG_DAEMON, "runns.c:%d / info / " format "\n", __LINE__, ##__VA_ARGS__);
 
-int sockfd;
-struct runns_child childs[MAX_CHILDS];
+struct runns_header hdr = {0};
+int sockfd = 0;
+struct runns_child childs[MAX_CHILDS] = {0};
 unsigned int childs_run = 0;
 char *program = 0;
 char *netns = 0;
@@ -40,17 +41,15 @@ stop_daemon(int flag);
 int
 clean_pids();
 
+void
+free_tvars();
+
 int
 main(int argc, char **argv)
 {
-  char *username;
-  char *program;
-  char *netns;
-  char *args;
   struct passwd *pw = NULL;
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = defsock};
-  char **envs;
-  struct runns_header hdr;
+
   int *glob_pid = mmap(NULL, sizeof(glob_pid), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   if (!glob_pid)
     ERR("Can't allocate memory");
@@ -132,6 +131,8 @@ main(int argc, char **argv)
     // Read program name and network namespace name
     program = (char *)malloc(hdr.prog_sz);
     netns = (char *)malloc(hdr.netns_sz);
+    if (!program || !netns)
+      ERR("Can't allocate memory (program=%p, netns=%p", program, netns);
     ret = read(data_sockfd, (void *)program, hdr.prog_sz);
     ret = read(data_sockfd, (void *)netns, hdr.netns_sz);
     INFO("uid=%d program=%s netns=%s", cred.uid, program, netns);
@@ -202,6 +203,7 @@ main(int argc, char **argv)
       childs[childs_run].uid = cred.uid;
       childs[childs_run].pid = *glob_pid;
       ++childs_run;
+      free_tvars();
     }
     else
       INFO("Maximum number of childs has been reached.");
@@ -245,6 +247,7 @@ stop_daemon(int flag)
     unlink(defsock);
     rmdir(RUNNS_DIR);
   }
+  free_tvars();
 
   int ret = flag ? flag & RUNNS_STOP : EXIT_FAILURE;
   exit(ret);
