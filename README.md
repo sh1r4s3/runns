@@ -1,6 +1,6 @@
 # ![GitHub Logo](/img/runns-logo.png)
 ## About
-The **RUNNS** provides daemon (*runns*), client (*runnsctl*) and helper scripts (*build-net.sh* and *clean-net.sh*) for GNU/Linux to
+The **RUNNS** provides daemon (*runns*), client (*runnsctl*) and helper scripts (*build-net* and *clean-net*) for GNU/Linux to
 easy create and delete network namespaces [1], connect this network namespace to default via veth pair [2] and setup iptables NAT rules.
 
 ## How to use it
@@ -43,7 +43,7 @@ The other options could been seen with following command:
 
 `./runnsctl --help`
 
-### build-net.sh
+### build-net
 This helper script allow user to easy create a network namespace.
 If run without arguments it will create a network namespace with a name vpn**X**, where **X**
 is the maximum number + 1 of namespaces with names `vpn[0-9]+`. Also, it will create a veth pair and assign one
@@ -61,18 +61,18 @@ With this option it is possible to set different resolv.conf files for each netw
 At the end the script will also create an iptables NAT rule and setup resolv.conf if
 it was mentioned in the command line arguments. The script will also automatically enable IPv4 forwarding.
 
-### clean-net.sh
-This helper script is needed to easy delete and clean network namespace created by **build-net.sh**.
+### clean-net
+This helper script is needed to easy delete and clean network namespace created by **build-net**.
 This script will check if any program is running inside the network namespace and if so it will ask to try
 to kill them all automatically.
-Please check the options before use: `./clean-net.sh --help`.
+Please check the options before use: `./clean-net --help`.
 
 ### Example use-case
 
 From **root** user:
 
 ```shell
-root$ ./build-net.sh
+root$ ./build-net
 root$ ip netns exec vpn1 openvpn /etc/openvpn/config
 root$ ./runns
 ```
@@ -86,7 +86,7 @@ iddqd$ ./runnsctl -s
 
 To clean-up:
 ```shell
-root$ ./clean-net.sh --name vpn1 -f
+root$ ./clean-net --name vpn1 -f
 ```
 
 ## Acknowledgement
