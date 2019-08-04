@@ -20,14 +20,14 @@ The building procedure is straight forward:
 
 * Run autoconf in the source directory to get configure script: `$ autoconf`.
 * Conifgure: `$ ./configure`.
-* Build program with GNU make: `$ make`
-* Install: `$ make install`
-* To uninstall use the following command: `$ make uninstall`
+* Build program with GNU make: `$ make`.
+* Install: `$ make install`.
+* To uninstall use the following command: `$ make uninstall`.
 
 The **runns** daemon will create a socket for communication with clients.
 Communication with this socket allowed only for users in the *runns* group.
-* Create *runns* group: `groupadd runns`
-* Add a user USERNAME to the *runns* group: `usermod -a -G runns USERNAME`
+* Create *runns* group: `groupadd runns`.
+* Add a user USERNAME to the *runns* group: `usermod -a -G runns USERNAME`.
 ### runns
 This is a main daemon. This daemon opens an UNIX socket in `/var/run/runns/runns.socket` and provides logs via *syslog*.
 ### runnsctl
