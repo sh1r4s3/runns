@@ -26,6 +26,10 @@
 int sockfd;
 struct runns_child childs[MAX_CHILDS];
 unsigned int childs_run = 0;
+char *program = 0;
+char *netns = 0;
+char **args = 0;
+char **envs = 0;
 
 int
 drop_priv(uid_t _uid, struct passwd **pw);
@@ -42,6 +46,7 @@ main(int argc, char **argv)
   char *username;
   char *program;
   char *netns;
+  char *args;
   struct passwd *pw = NULL;
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = defsock};
   char **envs;
@@ -131,6 +136,26 @@ main(int argc, char **argv)
     ret = read(data_sockfd, (void *)netns, hdr.netns_sz);
     INFO("uid=%d program=%s netns=%s", cred.uid, program, netns);
 
+    // Read argv for the program
+    if (hdr.args_sz)
+    {
+      hdr.args_sz += 2; // program name + null at the end
+      args = (char **)malloc(hdr.args_sz*sizeof(char *));
+      if (!args)
+        ERR("Can't allocate memory (args = %p)", args);
+      args[0] = program;
+      args[hdr.args_sz - 1] = 0;
+      for (int i = 1; i < hdr.args_sz - 1; i++)
+      {
+        size_t sz;
+        ret = read(data_sockfd, (void *)&sz, sizeof(size_t));
+        args[i] = (char *)malloc(sz);
+        ret = read(data_sockfd, (void *)args[i], sz);        
+      }
+    }
+    else
+      args = 0;
+
     // Read environment variables
     envs = (char **)malloc(++hdr.env_sz*sizeof(char *));
     for (int i = 0; i < hdr.env_sz - 1; i++)
@@ -166,7 +191,7 @@ main(int argc, char **argv)
         int netfd = open(netns, 0);
         setns(netfd, CLONE_NEWNET);
         drop_priv(cred.uid, &pw);
-        if (execve(program, 0, (char * const *)envs) == -1)
+        if (execve(program, (char * const *)args, (char * const *)envs) == -1)
           perror(0);
       }
       else
@@ -239,4 +264,16 @@ clean_pids()
       --childs_run;
     }
   }
+}
+
+void
+free_tvars()
+{
+  free(program);
+  free(netns);
+  for (size_t i = 1; i < hdr.args_sz - 3; free(args[i++]));
+  for (size_t i = 0; i < hdr.env_sz - 2; free(envs[i++]));
+  free(envs);
+  free(args);
+  memset((void *)&hdr, 1, sizeof(hdr));
 }

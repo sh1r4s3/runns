@@ -32,6 +32,7 @@ struct runns_header
   size_t prog_sz;
   size_t netns_sz;
   size_t env_sz;
+  size_t args_sz;
   unsigned int flag;
 };
 

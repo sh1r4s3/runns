@@ -40,7 +40,7 @@ main(int argc, char **argv)
 {
   struct runns_header hdr = {0};
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = defsock};
-  const char *prog = 0, *netns = 0;
+  const char *prog = 0, *netns = 0, *args = 0;
   const char *optstring = "hn:p:vsl";
   int opt;
   char verbose = 0;
@@ -117,6 +117,8 @@ main(int argc, char **argv)
     ERR("Can't connect to runns daemon");
     goto _exit;
   }
+  // Calculate number of non-options
+  hdr.args_sz = argc - optind;
 
   write(sockfd, (void *)&hdr, sizeof(hdr));
   // Stop daemon
@@ -138,6 +140,16 @@ main(int argc, char **argv)
 
   write(sockfd, (void *)prog, hdr.prog_sz);
   write(sockfd, (void *)netns, hdr.netns_sz);
+  // Transfer argv
+  if (hdr.args_sz > 0)
+  {
+    for (int i = optind; i < argc; i++)
+    {
+      size_t sz = strlen(argv[i]) + 1; // strlen + \0
+      write(sockfd, (void *)&sz, sizeof(size_t));
+      write(sockfd, (void *)argv[i], sz);
+    }
+  }
 
   // Transfer environment variables
   for (int i = 0; i < hdr.env_sz; i++)
