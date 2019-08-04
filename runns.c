@@ -31,6 +31,7 @@ char *program = 0;
 char *netns = 0;
 char **args = 0;
 char **envs = 0;
+int *glob_pid = 0;
 
 int
 drop_priv(uid_t _uid, struct passwd **pw);
@@ -50,7 +51,7 @@ main(int argc, char **argv)
   struct passwd *pw = NULL;
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = defsock};
 
-  int *glob_pid = mmap(NULL, sizeof(glob_pid), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  glob_pid = mmap(NULL, sizeof(glob_pid), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   if (!glob_pid)
     ERR("Can't allocate memory");
 
@@ -248,6 +249,7 @@ stop_daemon(int flag)
     rmdir(RUNNS_DIR);
   }
   free_tvars();
+  munmap(glob_pid, sizeof(glob_pid));
 
   int ret = flag ? flag & RUNNS_STOP : EXIT_FAILURE;
   exit(ret);
