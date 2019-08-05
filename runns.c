@@ -204,7 +204,7 @@ main(int argc, char **argv)
         setns(netfd, CLONE_NEWNET);
         drop_priv(cred.uid, &pw);
         if (execve(program, (char * const *)args, (char * const *)envs) == -1)
-          perror(0);
+          return EXIT_FAILURE;
       }
       else
         waitpid(child, 0, 0);
