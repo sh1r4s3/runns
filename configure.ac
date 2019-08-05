@@ -10,8 +10,8 @@ dnl Debug option
 AC_ARG_ENABLE(debug,
               AS_HELP_STRING([--enable-debug],[enable debugging, defult: no]),
               [case "${enableval}" in
-               yes) debug = true  ;;
-               no)  debug = false ;;
+               yes) debug=true  ;;
+               no)  debug=false ;;
                *)   AC_MSG_ERROR([bad value ${enablevalue} for --enable-debug]) ;;
              esac], [debug=false])
 
@@ -23,13 +23,14 @@ AC_CHECK_TOOL(IP, ip)
 AC_CHECK_TOOL(GAWK, gawk)
 
 dnl Disable all CFLAGS if it was not declarated
-if [test -z $CFLAGS; ] then
-  if test x"${debug}" == x"true"; then
+if [ test -z "$CFLAGS"; ] then
+  if [ test "x$debug" == "xtrue" ]; then
     CFLAGS="-g -O0"
   else
     CFLAGS="-O2"
   fi
 fi
+
 AC_PROG_CC
 
 if [ test "x$IPTABLES" == "x"; ] then
