@@ -164,15 +164,20 @@ main(int argc, char **argv)
       args = 0;
 
     // Read environment variables
-    envs = (char **)malloc(++hdr.env_sz*sizeof(char *));
-    for (int i = 0; i < hdr.env_sz - 1; i++)
+    if (hdr.env_sz)
     {
-      size_t env_sz;
-      ret = read(data_sockfd, (void *)&env_sz, sizeof(size_t));
-      envs[i] = (char *)malloc(env_sz);
-      ret = read(data_sockfd, (void *)envs[i], env_sz);
+      envs = (char **)malloc(++hdr.env_sz*sizeof(char *));
+      for (int i = 0; i < hdr.env_sz - 1; i++)
+      {
+        size_t env_sz;
+        ret = read(data_sockfd, (void *)&env_sz, sizeof(size_t));
+        envs[i] = (char *)malloc(env_sz);
+        ret = read(data_sockfd, (void *)envs[i], env_sz);
+      }
+      envs[hdr.env_sz - 1] = 0;
     }
-    envs[hdr.env_sz - 1] = 0;
+    else
+      envs = 0;
 
     close(data_sockfd);
 
@@ -281,8 +286,10 @@ free_tvars()
 {
   free(program);
   free(netns);
-  for (size_t i = 1; i < hdr.args_sz - 3; free(args[i++]));
-  for (size_t i = 0; i < hdr.env_sz - 2; free(envs[i++]));
+  if (args)
+    for (size_t i = 1; i < hdr.args_sz - 3; free(args[i++]));
+  if (envs)
+    for (size_t i = 0; i < hdr.env_sz - 2; free(envs[i++]));
   free(envs);
   free(args);
   memset((void *)&hdr, 1, sizeof(hdr));
