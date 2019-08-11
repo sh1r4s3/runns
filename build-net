@@ -65,7 +65,7 @@ cat <<EOF
 Using following options:
 - Network namespace: $NS
 - Network interface: $OUT
-- IPv4 address for ${NS}d: 172.0.${IP4C}.1/24
+- IPv4 address for ${NS}d: 172.24.${IP4C}.1/24
 - resolv.conf: ${RESOLVE:-using default}
 EOF
 
@@ -75,19 +75,19 @@ ip link add "$OUT" type veth peer name "${NS}r"
 ip link set "${NS}r" netns "$NS"
 echo "Network namespace created"
 # Set IP address and up interface in the default network namespace
-ip addr add "172.0.${IP4C}.1/24" dev "$OUT"
+ip addr add "172.24.${IP4C}.1/24" dev "$OUT"
 ip link set "$OUT" up
 echo "Interface  $OUT is up"
 # Setup interface in another network namespace
 ip netns exec "$NS" ip link set "${NS}r" name eth0
-ip netns exec "$NS" ip addr add "172.0.${IP4C}.2/24" dev eth0
+ip netns exec "$NS" ip addr add "172.24.${IP4C}.2/24" dev eth0
 ip netns exec "$NS" ip link set eth0 up
-ip netns exec "$NS" ip route add default via "172.0.${IP4C}.1"
+ip netns exec "$NS" ip route add default via "172.24.${IP4C}.1"
 echo "Interface ${NS}r in ${NS} is up and ready"
 # Enable IPv4 forward
 echo "1" > /proc/sys/net/ipv4/ip_forward
 # Add NAT rule
-iptables -t nat -A POSTROUTING -s 172.0.${IP4C}.0/24 -o "$INT" -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 172.24.${IP4C}.0/24 -o "$INT" -j MASQUERADE
 echo "NAT rule is ready"
 # Setup resolv.conf for this network namespace
 if [ -n "${RESOLVE-}" ]

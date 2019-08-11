@@ -64,7 +64,7 @@ then
 fi
 
 # Get ip route
-IPT=$(ip netns exec "$NS" ip route | awk '/^172\.0.*eth0/{print $1}')
+IPT=$(ip netns exec "$NS" ip route | awk '/^172\.24.*eth0/{print $1}')
 # Delete network namespace and NAT rule
 ip netns del "$NS"
 iptables -t nat -D POSTROUTING -s "$IPT" -o eth0 -j MASQUERADE
