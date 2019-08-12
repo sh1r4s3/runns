@@ -96,6 +96,6 @@ then
     [ ! -f "$RESOLVE" ] || cp "$RESOLVE" "/etc/netns/$NS"
 fi
 
-# One should add this rules in the case of restricted netfilter setup (all DROP)
-# iptables -A FORWARD -i eth0 -o vpn0 -j ACCEPT
-# iptables -A FORWARD -o eth0 -i vpn0 -j ACCEPT
+# ACCEPT FORWARD
+iptables -A FORWARD -i $INT -o $OUT -j ACCEPT
+iptables -A FORWARD -o $INT -i $OUT -j ACCEPT
