@@ -57,8 +57,8 @@ If run without arguments it will create a network namespace with a name vpn**X**
 is the maximum number + 1 of namespaces with names `vpn[0-9]+`. Also, it will create a veth pair and assign one
 to the vpn**X** (it will be called eth0) and another to the default network namespace
 (it will be called the same as namespace -- vpn**X**). The script will assign an IPv4 address to the veth pair:
-* vpn**X** in the default namespace -- 172.0.**X**.1/24
-* eth0 in the vpn**X** namespace -- 172.0.**X**.2/24
+* vpn**X** in the default namespace -- 172.24.**X**.1/24
+* eth0 in the vpn**X** namespace -- 172.24.**X**.2/24
 
 One could explicitly set the name of the veth interface in the default namespace and network namespace with the
 `--int` and `--name` options.
