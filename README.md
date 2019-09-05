@@ -69,6 +69,21 @@ With this option it is possible to set different resolv.conf files for each netw
 At the end the script will also create an iptables NAT rule and setup resolv.conf if
 it was mentioned in the command line arguments. The script will also automatically enable IPv4 forwarding.
 
+This script also contains --section option. This option allows to load a specific section from the /etc/runns.conf
+file. This file a plain case insensitive INI file and could contains the following options:
+NetworkNamespace, InterfaceIn, InterfaceOut, Resolve.
+For example:
+```shell
+$ cat /etc/runns.conf
+[work]
+NetworkNamespace=vpnWork
+InterfaceIn=vpnWorkd
+vpn=/etc/openvpn/work.conf
+vpn=/etc/openvpn/myvps.conf
+```
+Each vpn option specifies configuration files for OpenVPN [13]. OpenVPN will be started as a daemon
+with a "openvpn-**NetworkNamespaceName**" name in the system logger.
+
 ### clean-net
 This helper script is needed to easy delete and clean network namespace created by **build-net**.
 This script will check if any program is running inside the network namespace and if so it will ask to try
@@ -141,3 +156,5 @@ Thanks for the nice font [11] by Amazingmax which is used in the logo.
 11 -- https://fonts2u.com/amazdoomright.font
 
 12 -- https://01.org/connman
+
+13 -- https://openvpn.net
