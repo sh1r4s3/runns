@@ -64,7 +64,7 @@ One could explicitly set the name of the veth interface in the default namespace
 `--int` and `--name` options.
 
 Another useful feature is the `--resolve` option.
-With this option it is possible to set different resolv.conf files for each network namespace. 
+With this option it is possible to set different resolv.conf files for each network namespace.
 
 At the end the script will also create an iptables NAT rule and setup resolv.conf if
 it was mentioned in the command line arguments. The script will also automatically enable IPv4 forwarding.
@@ -97,6 +97,22 @@ To clean-up:
 root$ clean-net --name vpn1 -f
 ```
 
+## Troubleshooting
+
+### Network managers
+
+Some network managers have an issue with interfaces created by build-net and clean-net.
+To resolve these issues please add the vpn interfaces (or according to yours naming convention)
+to network manager's skip list.
+
+For example in the case of connman [12] one could add "vpn" to the **NetworkInterfaceBlacklist**
+in /etc/connman/main.conf.
+
+```shell
+$ grep ^NetworkInterfaceBlacklist /etc/connman/main.conf
+NetworkInterfaceBlacklist = vmnet,vboxnet,virbr,ifb,ve-,vb-,vpn
+```
+
 ## Acknowledgement
 
 Thanks for the nice font [11] by Amazingmax which is used in the logo.
@@ -123,3 +139,5 @@ Thanks for the nice font [11] by Amazingmax which is used in the logo.
 10 -- https://www.gnu.org/software/autoconf
 
 11 -- https://fonts2u.com/amazdoomright.font
+
+12 -- https://01.org/connman
