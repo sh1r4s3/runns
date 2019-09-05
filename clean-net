@@ -16,6 +16,13 @@ EOF
     exit 0
 }
 
+before_exit()
+{
+    ip netns del "$NS"
+}
+
+trap before_exit EXIT HUP PIPE INT QUIT TERM
+
 [ $# -ge 1 ] || help
 
 # Parse command line arguments
@@ -64,10 +71,14 @@ then
 fi
 
 # Get ip route
-IPT=$(ip netns exec "$NS" ip route | awk '/^172\.24.*eth0/{print $1}')
-# Delete network namespace and NAT rule
-ip netns del "$NS"
+IPT=$(ip -netns "$NS" route | awk '/^172\.24.*eth0/{print $1}')
+# Delete iptables rule and network namespace
+VPND="$(ip -human -oneline -details link | awk "/link-netns $NS/{match(\$0, /^[0-9]+:[ ]*([^ ]*)@if/, m); print m[1]}")"
+iptables -D FORWARD -i "$VPND" -o eth0 -j ACCEPT
+iptables -D FORWARD -o "$VPND" -i eth0 -j ACCEPT
 iptables -t nat -D POSTROUTING -s "$IPT" -o eth0 -j MASQUERADE
+ip route del "$IPT"
+
 # Delete resolv.conf setup
 [ -d "/etc/netns/$NS" ] && rm -rf "/etc/netns/$NS"
 # Disable IPv4 forward
