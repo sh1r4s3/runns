@@ -11,6 +11,7 @@ Usage: ${0##*/} [options]
 Options:
   -h | --help     print this help message
   -n | --name     namespace name (default is "vpnX", where X is a number)
+  -s | --section  specify section to load from /etc/runns.conf
   -i | --int      interface name (default is "eth0")
   -o | --out      interface name for veth in default network namespace
                   (default is "vpnX", where X is a number)
@@ -20,13 +21,16 @@ EOF
 }
 
 # Parse command line arguments
-TMPARGS="$(getopt -n "$0" -o n:,i:,o:,r:,h -l name:,int:,out:,resolve:,help -- "$@")" ||
+TMPARGS="$(getopt -n "$0" -o n:,i:,o:,s:,r:,h -l name:,int:,out:,section:,resolve:,help -- "$@")" ||
 	  help
 eval set -- "$TMPARGS"
 
 NS=
 INT=
 OUT=
+CONFIG=/etc/runns.conf
+SECTION=
+RESOLVE=
 while :
 do
     case "$1" in
@@ -38,6 +42,8 @@ do
             shift; INT="$1" ;;
         -o|--out)
             shift; OUT="$1" ;;
+        -s|--section)
+            shift; SECTION="$1" ;;
         -r|--resolve)
             shift; RESOLVE="$1" ;;
         *)
@@ -46,11 +52,42 @@ do
     shift
 done
 
+# Load configuration file if it was specified
+if [ -n "$SECTION" ]; then
+    # Read network namespace if it is not set
+    [ -n "$NS" ] || NS="$(awk -F '=' -v section="[$SECTION]" '
+BEGIN{ IGNORECASE = 1}
+$0==section { flag=1; next }
+/\[/{ flag=0; next }
+flag && $1=="NetworkNamespace"{ print $2; exit }
+' $CONFIG)"
+    # Read interfaces name if it is not set
+    [ -n "$INT" ] || INT="$(awk -F '=' -v section="[$SECTION]" '
+BEGIN{ IGNORECASE = 1}
+$0==section { flag=1; next }
+/\[/{ flag=0; next }
+flag && $1=="InterfaceIn"{ print $2; exit }
+' $CONFIG)"
+    [ -n "$OUT" ] || OUT="$(awk -F '=' -v section="[$SECTION]" '
+BEGIN{ IGNORECASE = 1}
+$0==section { flag=1; next }
+/\[/{ flag=0; next }
+flag && $1=="InterfaceOut"{ print $2; exit }
+' $CONFIG)"
+    # Read resolve.conf
+    [ -n "$RESOLVE" ] || RESOLVE="$(awk -F '=' -v section="[$SECTION]" '
+BEGIN{ IGNORECASE = 1}
+$0==section { flag=1; next }
+/\[/{ flag=0; next }
+flag && $1=="Resolve"{ print $2; exit }
+' $CONFIG)"
+fi
+
 # If NS is empty set the default value "vpn$MAXNS"
 if [ -z "$NS" ]; then
-    MAXNS=$(find /var/run/netns/ -maxdepth 1 -type f -regex '.*/vpn[0-9]' -printf '%f\n' |
-                awk 'BEGIN{max=0} match($0, /[0-9]+/){n=substr($0, RSTART, RLENGTH); if (max>n) {max=n}} END{print n}')
-    [ -n "$MAXNS" ] && MAXNS="$(( MAXNS + 1 ))" || MAXNS="${MAXNS:-1}"
+    MAXNS=$(find /var/run/netns/ -maxdepth 1 -type f -regex '.*/vpn[0-9]+' -printf '%f\n' |
+                awk 'BEGIN{max=0} match($0, /[0-9]+/){n=substr($0, RSTART, RLENGTH); if (max<n) {max=n}} END{print ++n}')
+    [ -n "$MAXNS" ] || MAXNS=1
     NS="vpn$MAXNS"
 fi
 # Set IPv4 third octet
@@ -99,3 +136,11 @@ fi
 # ACCEPT FORWARD
 iptables -A FORWARD -i $INT -o $OUT -j ACCEPT
 iptables -A FORWARD -o $INT -i $OUT -j ACCEPT
+
+# Launch commands in the new network namespace
+awk -F '=' -v section="[$SECTION]" '
+BEGIN{ IGNORECASE = 1}
+$0==section { flag=1; next }
+/\[/{ flag=0; next }
+flag && $1=="vpn"{ print $2 }
+' $CONFIG | (while read arg; do ip netns exec "$NS" openvpn --daemon "openvpn-$NS" --config "$arg"; done)
