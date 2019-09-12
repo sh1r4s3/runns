@@ -55,11 +55,11 @@ then
     read KILL
     if [ "$KILL" = "a" ]
     then
-        for i in $pids
-        do
-            kill $pids
-        done
-        sleep 1
+        echo -ne "Killing $pids... "
+        kill $pids
+        wait $pids || :
+        echo -ne "done\n"
+
         if [ "$(ip netns pids "$NS")" != "" ]
         then
             echo "Can't kill all PIDs. Exit."
@@ -80,6 +80,6 @@ iptables -t nat -D POSTROUTING -s "$IPT" -o eth0 -j MASQUERADE
 ip route del "$IPT"
 
 # Delete resolv.conf setup
-[ -d "/etc/netns/$NS" ] && rm -rf "/etc/netns/$NS"
+[ ! -d "/etc/netns/$NS" ] || rm -rf "/etc/netns/$NS"
 # Disable IPv4 forward
 [ -z "${DISABLE_FORWARD-}" ] || echo "0" > /proc/sys/net/ipv4/ip_forward
