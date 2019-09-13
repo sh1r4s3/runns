@@ -55,10 +55,15 @@ then
     read KILL
     if [ "$KILL" = "a" ]
     then
-        echo -ne "Killing $pids... "
-        kill $pids
-        wait $pids || :
-        echo -ne "done\n"
+        for i in $pids
+        do
+            kill "$i" || continue
+            while [ -e "/proc/$i" ]
+            do
+                sleep 1
+                echo "Waiting for $i..."
+            done
+        done
 
         if [ "$(ip netns pids "$NS")" != "" ]
         then
@@ -78,6 +83,7 @@ iptables -D FORWARD -i "$VPND" -o eth0 -j ACCEPT
 iptables -D FORWARD -o "$VPND" -i eth0 -j ACCEPT
 iptables -t nat -D POSTROUTING -s "$IPT" -o eth0 -j MASQUERADE
 ip route del "$IPT"
+ip link del "$VPND"
 
 # Delete resolv.conf setup
 [ ! -d "/etc/netns/$NS" ] || rm -rf "/etc/netns/$NS"
