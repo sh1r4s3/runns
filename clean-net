@@ -21,8 +21,6 @@ before_exit()
     ip netns del "$NS"
 }
 
-trap before_exit EXIT HUP PIPE INT QUIT TERM
-
 [ $# -ge 1 ] || help
 
 # Parse command line arguments
@@ -75,13 +73,16 @@ then
     fi
 fi
 
+trap before_exit EXIT HUP PIPE INT QUIT TERM
+
 # Get ip route
 IPT=$(ip -netns "$NS" route | awk '/^172\.24.*eth0/{print $1}')
 # Delete iptables rule and network namespace
 VPND="$(ip -human -oneline -details link | awk "/link-netns $NS/{match(\$0, /^[0-9]+:[ ]*([^ ]*)@if/, m); print m[1]}")"
-iptables -D FORWARD -i "$VPND" -o eth0 -j ACCEPT
-iptables -D FORWARD -o "$VPND" -i eth0 -j ACCEPT
-iptables -t nat -D POSTROUTING -s "$IPT" -o eth0 -j MASQUERADE
+INT="$(iptables -S | awk "/.*-o ${VPND}.*/{if(match(\$0, /.*-i ([^ ]+) .*/, m)){print m[1]}}")"
+iptables -D FORWARD -i "$VPND" -o "$INT" -j ACCEPT
+iptables -D FORWARD -o "$VPND" -i "$INT" -j ACCEPT
+iptables -t nat -D POSTROUTING -s "$IPT" -o "$INT" -j MASQUERADE
 ip route del "$IPT"
 ip link del "$VPND"
 
