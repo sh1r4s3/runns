@@ -98,7 +98,7 @@ main(int argc, char **argv)
       close(data_sockfd);
       continue;
     }
-    
+
     int ret = read(data_sockfd, (void *)&hdr, sizeof(hdr));
     if (ret == -1)
       WARN("Can't read data");
@@ -106,9 +106,17 @@ main(int argc, char **argv)
     // Stop daemon on demand.
     if (hdr.flag & RUNNS_STOP)
     {
-      INFO("closing");
-      close(data_sockfd);
-      stop_daemon(hdr.flag);
+      if (cred.uid == 0)
+      {
+        INFO("closing");
+        close(data_sockfd);
+        stop_daemon(hdr.flag);
+      }
+      else
+      {
+        WARN("Client with %d UID tried to kill the daemon ", cred.uid);
+        continue;
+      }
     }
     // Transfer list of childs
     if (hdr.flag & RUNNS_LIST)
@@ -122,7 +130,7 @@ main(int argc, char **argv)
         if (childs[i].uid == cred.uid)
           ++jobs;
       }
-        
+
       if (write(data_sockfd, (void *)&jobs, sizeof(jobs)) == -1)
         ERR("Can't send number of jobs to the client %d", cred.uid);
       for (unsigned int i = 0; i < jobs; i++)
@@ -157,7 +165,7 @@ main(int argc, char **argv)
         size_t sz;
         ret = read(data_sockfd, (void *)&sz, sizeof(size_t));
         args[i] = (char *)malloc(sz);
-        ret = read(data_sockfd, (void *)args[i], sz);        
+        ret = read(data_sockfd, (void *)args[i], sz);
       }
     }
     else
