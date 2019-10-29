@@ -51,6 +51,14 @@ main(int argc, char **argv)
   struct passwd *pw = NULL;
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = defsock};
 
+  // Check the root
+  if (getuid() != 0)
+  {
+    extern FILE *stderr;
+    fputs("Please run as a root user\n", stderr);
+    ERR("Only root can run the runns daemon");
+  }
+
   glob_pid = mmap(NULL, sizeof(glob_pid), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   if (!glob_pid)
     ERR("Can't allocate memory");
