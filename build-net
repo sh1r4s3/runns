@@ -107,7 +107,7 @@ Using following options:
 EOF
 
 # Check that network interface is exists
-ip link show "$INT" > /dev/null 2>&1 /dev/null || (echo "Interface $INT does not exists!"; exit 1)
+ip link show "$INT" > /dev/null 2>&1 || (echo "Interface $INT does not exists!"; exit 1)
 # Add network namespace and interfaces
 ip netns add "$NS"
 ip link add "$OUT" type veth peer name "${NS}r"
