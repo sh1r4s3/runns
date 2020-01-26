@@ -120,6 +120,9 @@ main(int argc, char **argv)
   // Calculate number of non-options
   hdr.args_sz = argc - optind;
 
+  // Get termios
+  tcgetattr(STDIN_FILENO, &hdr.tmode);
+
   if (write(sockfd, (void *)&hdr, sizeof(hdr)) == -1)
     ERR("Can't send header to the daemon");
   // Stop daemon

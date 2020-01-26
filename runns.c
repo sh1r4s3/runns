@@ -208,14 +208,52 @@ main(int argc, char **argv)
       // Child
       if (child == 0)
       {
-        // Detach child from parent
-        setsid();
         child = fork();
         if (child != 0)
         {
           *glob_pid = child;
           exit(0);
         }
+
+        // Detach child from parent
+        setsid();
+
+        // Redirect stdin, stdout, stderr to new PTS
+        int ptmfd = open("/dev/ptmx", O_RDWR);
+        char ptsname[0xff];
+        if (ptsname_r(ptmfd, ptsname, 0xff))
+        {
+          WARN("Fail to get ptsname, errno=%d", errno);
+          exit(errno);
+        }
+        if (grantpt(ptmfd))
+        {
+          WARN("Fail to grant access to the slave pt, errno=%d", errno);
+          exit(errno);
+        }
+        if (unlockpt(ptmfd))
+        {
+          WARN("Fail to unlock a pt, errno=%d", errno);
+          exit(errno);
+        }
+        int ptsfd = open(ptsname, O_RDWR);
+        tcsetattr(ptsfd, TCSANOW, &hdr.tmode);
+        if (dup2(ptsfd, STDIN_FILENO) == -1)
+        {
+          WARN("Fail to dup2 pt for stdin, errno=%d", errno);
+          exit(errno);
+        }
+        if (dup2(ptsfd, STDOUT_FILENO) == -1)
+        {
+          WARN("Fail to dup2 pt for stdout, errno=%d", errno);
+          exit(errno);
+        }
+        if (dup2(ptsfd, STDERR_FILENO) == -1)
+        {
+          WARN("Fail to dup2 pt for stderr, errno=%d", errno);
+          exit(errno);
+        }
+
         int netfd = open(netns, 0);
         setns(netfd, CLONE_NEWNET);
         drop_priv(cred.uid, &pw);

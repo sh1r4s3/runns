@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <termios.h>
 
 // Linux socket default file.
 #define RUNNS_DIR "/var/run/runns/"
@@ -34,6 +35,7 @@ struct runns_header
   size_t env_sz;
   size_t args_sz;
   unsigned int flag;
+  struct termios tmode;
 };
 
 struct runns_child
