@@ -331,7 +331,7 @@ clean_pids()
     {
       if (i != childs_run)
       {
-        memcpy(childs + childs_run - 1, childs + i - 1, sizeof(struct runns_child));
+        memcpy(childs + i - 1, childs + childs_run - 1, sizeof(struct runns_child));
       }
       --childs_run;
     }
