@@ -139,7 +139,7 @@ main(int argc, char **argv)
     {
       if (read(sockfd, (void *)&child, sizeof(child)) == -1)
         ERR("Can't read child info from the daemon");
-      printf("%d) pid=%d\n", i, child.pid);
+      printf("%d\n", child.pid);
     }
     goto _exit;
   }
