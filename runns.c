@@ -215,6 +215,9 @@ main(int argc, char **argv)
           exit(0);
         }
 
+        // Un-map shared memory from the parent.
+        munmap(glob_pid, sizeof(glob_pid));
+
         // Detach child from parent
         setsid();
 
