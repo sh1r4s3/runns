@@ -298,8 +298,15 @@ drop_priv(uid_t _uid, struct passwd **pw)
           (unsigned long)uid,
           (unsigned long)gid);
     }
-    else
-      fprintf(stderr, "dropped privs to %s\n", (*pw)->pw_name);
+
+    if (chdir((*pw)->pw_dir))
+    {
+      ERR("Couldn't chdir to %s for '%.32s' uid=%lu gid=%lu",
+          (*pw)->pw_dir,
+          (*pw)->pw_name,
+          (unsigned long)uid,
+          (unsigned long)gid);
+    }
   }
   else
     ERR("Couldn't find user '%.32s'", (*pw)->pw_name);
