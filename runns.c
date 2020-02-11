@@ -261,7 +261,10 @@ main(int argc, char **argv)
         setns(netfd, CLONE_NEWNET);
         drop_priv(cred.uid, &pw);
         if (execve(program, (char * const *)args, (char * const *)envs) == -1)
+        {
+          WARN("Can not run %s, execve failed with errno=%d", program, errno);
           return EXIT_FAILURE;
+        }
       }
       else
         waitpid(child, 0, 0);
