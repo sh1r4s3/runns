@@ -99,11 +99,7 @@ main(int argc, char **argv)
   }
 
   // Count number of environment variables
-  for (size_t i = 0; environ[i] != 0; i++)
-  {
-    if (environ[i][0] != '_' && environ[i][1] != '=')
-      hdr.env_sz++;
-  }
+  for (hdr.env_sz = 0; environ[hdr.env_sz] != 0; ++hdr.env_sz);
 
   // Up socket
   sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -166,14 +162,11 @@ main(int argc, char **argv)
   // Transfer environment variables
   for (int i = 0; i < hdr.env_sz; i++)
   {
-    if (environ[i][0] != '_' && environ[i][1] != '=')
+    size_t sz = strlen(environ[i]) + 1; // strlen + \0
+    if (write(sockfd, (void *)&sz, sizeof(size_t)) == -1 ||
+        write(sockfd, (void *)environ[i], sz) == -1)
     {
-      size_t sz = strlen(environ[i]) + 1; // strlen + \0
-      if (write(sockfd, (void *)&sz, sizeof(size_t)) == -1 ||
-          write(sockfd, (void *)environ[i], sz) == -1)
-      {
-        ERR("Can't send envs to the daemon");
-      }
+      ERR("Can't send envs to the daemon");
     }
   }
   int eof = 0;
