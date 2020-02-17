@@ -21,11 +21,13 @@
 // Maximum number of childs
 #define MAX_CHILDS 1024
 
-// Definitions of the stop bits:
+// Definitions of the flag bits:
 // RUNNS_STOP -- wait for childs to exit and then exit.
-// RUNNS_LIST -- list childs runned by runns
-#define RUNNS_STOP (int)1 << 1
-#define RUNNS_LIST (int)1 << 2
+// RUNNS_LIST -- list childs runned by runns.
+// RUNNS_NPTS -- create control terminal for forked process.
+#define RUNNS_STOP        (int)1 << 1
+#define RUNNS_LIST        (int)1 << 2
+#define RUNNS_NPTMS       (int)1 << 3
 
 // common header for server and client
 struct runns_header

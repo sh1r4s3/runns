@@ -46,6 +46,9 @@ void
 free_tvars();
 
 int
+create_ptms();
+
+int
 main(int argc, char **argv)
 {
   struct passwd *pw = NULL;
@@ -222,39 +225,13 @@ main(int argc, char **argv)
         setsid();
 
         // Redirect stdin, stdout, stderr to new PTS
-        int ptmfd = open("/dev/ptmx", O_RDWR);
-        char ptsname[0xff];
-        if (ptsname_r(ptmfd, ptsname, 0xff))
+        if (hdr.flag & RUNNS_NPTMS)
         {
-          WARN("Fail to get ptsname, errno=%d", errno);
-          exit(errno);
-        }
-        if (grantpt(ptmfd))
-        {
-          WARN("Fail to grant access to the slave pt, errno=%d", errno);
-          exit(errno);
-        }
-        if (unlockpt(ptmfd))
-        {
-          WARN("Fail to unlock a pt, errno=%d", errno);
-          exit(errno);
-        }
-        int ptsfd = open(ptsname, O_RDWR);
-        tcsetattr(ptsfd, TCSANOW, &hdr.tmode);
-        if (dup2(ptsfd, STDIN_FILENO) == -1)
-        {
-          WARN("Fail to dup2 pt for stdin, errno=%d", errno);
-          exit(errno);
-        }
-        if (dup2(ptsfd, STDOUT_FILENO) == -1)
-        {
-          WARN("Fail to dup2 pt for stdout, errno=%d", errno);
-          exit(errno);
-        }
-        if (dup2(ptsfd, STDERR_FILENO) == -1)
-        {
-          WARN("Fail to dup2 pt for stderr, errno=%d", errno);
-          exit(errno);
+          int err;
+          if (err = create_ptms())
+          {
+            exit(err);
+          }
         }
 
         int netfd = open(netns, 0);
@@ -360,4 +337,45 @@ free_tvars()
   free(envs);
   free(args);
   memset((void *)&hdr, 1, sizeof(hdr));
+}
+
+int
+create_ptms()
+{
+  int ptmfd = open("/dev/ptmx", O_RDWR);
+  char ptsname[0xff];
+  if (ptsname_r(ptmfd, ptsname, 0xff))
+  {
+    WARN("Fail to get ptsname, errno=%d", errno);
+    return errno;
+  }
+  if (grantpt(ptmfd))
+  {
+    WARN("Fail to grant access to the slave pt, errno=%d", errno);
+    return errno;
+  }
+  if (unlockpt(ptmfd))
+  {
+    WARN("Fail to unlock a pt, errno=%d", errno);
+    return errno;
+  }
+  int ptsfd = open(ptsname, O_RDWR);
+  tcsetattr(ptsfd, TCSANOW, &hdr.tmode);
+  if (dup2(ptsfd, STDIN_FILENO) == -1)
+  {
+    WARN("Fail to dup2 pt for stdin, errno=%d", errno);
+    return errno;
+  }
+  if (dup2(ptsfd, STDOUT_FILENO) == -1)
+  {
+    WARN("Fail to dup2 pt for stdout, errno=%d", errno);
+    return errno;
+  }
+  if (dup2(ptsfd, STDERR_FILENO) == -1)
+  {
+    WARN("Fail to dup2 pt for stderr, errno=%d", errno);
+    return errno;
+  }
+
+  return 0;
 }

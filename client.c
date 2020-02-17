@@ -14,6 +14,7 @@ struct option opts[] =
   { .name = "verbose", .has_arg = 0, .flag = 0, .val = 'v' },
   { .name = "stop", .has_arg = 0, .flag = 0, .val = 's' },
   { .name = "list", .has_arg = 0, .flag = 0, .val = 'l' },
+  { .name = "create-ptms", .has_arg = 0, .flag = 0, .val = 't' },
   { 0, 0, 0, 0 }
 };
 
@@ -22,14 +23,16 @@ extern char **environ;
 void
 help_me()
 {
-  const char *hstr = "client [options]\n" \
-                     "Options:\n" \
-                     "-h|--help\thelp\n" \
-                     "-s|--stop\tstop daemon\n" \
-                     "-l|--list\tlist childs\n" \
-                     "-n|--netns\tnetwork namespace to switch\n" \
-                     "-p|--program\tprogram to run in desired netns\n" \
-                     "-v|--verbose\tbe verbose\n";
+  const char *hstr = \
+"client [options]\n"                                            \
+"Options:\n"                                                    \
+"-h|--help             help\n"                                  \
+"-s|--stop             stop daemon\n"                           \
+"-l|--list             list childs\n"                           \
+"-n|--netns            network namespace to switch\n"           \
+"-p|--program          program to run in desired netns\n"       \
+"-t|--create-ptms      create control terminal\n"               \
+"-v|--verbose          be verbose\n";
 
   puts(hstr);
   exit(EXIT_SUCCESS);
@@ -41,7 +44,7 @@ main(int argc, char **argv)
   struct runns_header hdr = {0};
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = defsock};
   const char *prog = 0, *netns = 0, *args = 0;
-  const char *optstring = "hn:p:vsl";
+  const char *optstring = "hn:p:vslt";
   int opt;
   char verbose = 0;
   int sockfd = 0;
@@ -73,6 +76,9 @@ main(int argc, char **argv)
       case 'p':
         prog = optarg;
         hdr.prog_sz = strlen(prog) + 1;
+        break;
+      case 't':
+        hdr.flag |= RUNNS_NPTMS;
         break;
       case 'v':
         verbose = 1;
