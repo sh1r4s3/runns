@@ -5,16 +5,17 @@
       fprintf(stderr, "client.c:%d / errno=%d / " format "\n", __LINE__, errno, ##__VA_ARGS__); \
       ret = EXIT_FAILURE;
 
+enum wide_opts {OPT_SET_NETNS = 0xFF01};
 
 struct option opts[] =
 {
   { .name = "help", .has_arg = 0, .flag = 0, .val = 'h' },
-  { .name = "netns", .has_arg = 1, .flag = 0, .val = 'n' },
   { .name = "program", .has_arg = 1, .flag = 0, .val = 'p' },
   { .name = "verbose", .has_arg = 0, .flag = 0, .val = 'v' },
   { .name = "stop", .has_arg = 0, .flag = 0, .val = 's' },
   { .name = "list", .has_arg = 0, .flag = 0, .val = 'l' },
   { .name = "create-ptms", .has_arg = 0, .flag = 0, .val = 't' },
+  { .name = "set-netns", .has_arg = 1, .flag = 0, .val = OPT_SET_NETNS },
   { 0, 0, 0, 0 }
 };
 
@@ -27,11 +28,11 @@ help_me()
 "client [options]\n"                                            \
 "Options:\n"                                                    \
 "-h|--help             help\n"                                  \
-"-s|--stop             stop daemon\n"                           \
+"-s|--stop             stop daemon (only root)\n"               \
 "-l|--list             list childs\n"                           \
-"-n|--netns            network namespace to switch\n"           \
-"-p|--program          program to run in desired netns\n"       \
+"-p|--program <path>   program to run in desired netns\n"       \
 "-t|--create-ptms      create control terminal\n"               \
+"--set-netns <path>    network namespace to switch\n"           \
 "-v|--verbose          be verbose\n";
 
   puts(hstr);
@@ -44,7 +45,7 @@ main(int argc, char **argv)
   struct runns_header hdr = {0};
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = defsock};
   const char *prog = 0, *netns = 0, *args = 0;
-  const char *optstring = "hn:p:vslt";
+  const char *optstring = "hp:vslt";
   int opt;
   char verbose = 0;
   int sockfd = 0;
@@ -69,10 +70,6 @@ main(int argc, char **argv)
       case 'l':
         hdr.flag |= RUNNS_LIST;
         break;
-      case 'n':
-        netns = optarg;
-        hdr.netns_sz = strlen(netns) + 1;
-        break;
       case 'p':
         prog = optarg;
         hdr.prog_sz = strlen(prog) + 1;
@@ -82,6 +79,10 @@ main(int argc, char **argv)
         break;
       case 'v':
         verbose = 1;
+        break;
+    case OPT_SET_NETNS:
+        netns = optarg;
+        hdr.netns_sz = strlen(netns) + 1;
         break;
       default:
         ERR("Wrong option: %c", (char)opt);
