@@ -37,7 +37,7 @@ To add argv to the program enter them after the '--': `runnsctl --program foo --
 
 For example, to run a *chromium* inside the *foo* network namespace with temporary profile one could run:
 
-`runnsctl --program /usr/bin/chromium --netns /var/run/netns/foo -- --temp-profile`
+`runnsctl --program /usr/bin/chromium --set-netns /var/run/netns/foo -- --temp-profile`
 
 To stop the daemon:
 
@@ -102,7 +102,7 @@ root$ runns
 
 From **iddqd** user:
 ```shell
-iddqd$ runnsctl --program /usr/bin/chromium --netns /var/run/netns/vpn1
+iddqd$ runnsctl --program /usr/bin/chromium --set-netns /var/run/netns/vpn1
 ...
 iddqd$ runnsctl -s
 ```
@@ -111,6 +111,17 @@ To clean-up:
 ```shell
 root$ clean-net --name vpn1 -f
 ```
+
+### Run tmux session inside network namespace
+
+```shell
+user$ # Run new tmux session with vpn123.socket
+user$ runnsctl --create-ptms --program /usr/bin/tmux --set-netns /var/run/netns/vpn123 -- -L vpn123.socket
+user$ # Attach tmux to the vpn123.socket
+user$ tmux -2 -L vpn123.socket attach -d
+```
+
+Now you are inside the network namespace in the new tmux session.
 
 ## Troubleshooting
 
