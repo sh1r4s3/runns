@@ -1,7 +1,18 @@
 # ![GitHub Logo](/img/runns-logo.png)
+
+## Contents  
+* [About](#about)  
+* [How to use it](#how-to-use-it)  
+* [Troubleshooting](#troubleshooting)  
+* [Example use-case](#example-use-case)  
+* [Acknowledgement](#acknowledgement)  
+* [References](#references)
+
 ## About
 The **RUNNS** provides daemon (*runns*), client (*runnsctl*) and helper scripts (*build-net* and *clean-net*) for GNU/Linux to
 easy create and delete network namespaces [1], connect this network namespace to default via veth pair [2] and setup iptables NAT rules.
+
+**Why would you need this?** Let's assume a simple situation - you have a VPN with 0.0.0.0/1 default route (i.e. all of your traffic goes through VPN). However, VPN bandwidth is low and you don't want to pass some connections through VPN, for example SSH to another machine, or you simply don't want that all of your traffic goes through VPN. With runns it is easy to isolate programs inside a Linux network namespace with a VPN.
 
 ## How to use it
 ### Building
@@ -29,7 +40,7 @@ Communication with this socket allowed only for users in the *runns* group.
 * Create *runns* group: `groupadd runns`.
 * Add a user USERNAME to the *runns* group: `usermod -a -G runns USERNAME`.
 ### runns
-This is a main daemon. This daemon opens an UNIX socket in `/var/run/runns/runns.socket` and provides logs via *syslog*.
+This is a main daemon. This daemon opens an UNIX socket, by default in `/var/run/runns/runns.socket`, and provides logs via *syslog*.
 ### runnsctl
 This is a client for **runns** daemon. It allows to run a program inside the specified network namespace.
 It will copy all user shell environment variables and program path to the daemon.
@@ -71,7 +82,7 @@ it was mentioned in the command line arguments. The script will also automatical
 
 This script also contains --section option. This option allows to load a specific section from the /etc/runns.conf
 file. This file a plain case insensitive INI file and could contains the following options:
-NetworkNamespace, InterfaceIn, InterfaceOut, Resolve.
+**NetworkNamespace**, **InterfaceIn**, **InterfaceOut**, **Resolve**.
 For example:
 ```shell
 $ cat /etc/runns.conf
@@ -90,26 +101,25 @@ This script will check if any program is running inside the network namespace an
 to kill them all automatically.
 Please check the options before use: `clean-net --help`.
 
-### Example use-case
+## Example use-case
 
+Let's assume that there is a /etc/runns.conf configuration file from above.  
 From **root** user:
 
 ```shell
-root$ build-net
-root$ ip netns exec vpn1 openvpn /etc/openvpn/config &
+root$ build-net -s work
 root$ runns
 ```
 
 From **iddqd** user:
 ```shell
-iddqd$ runnsctl --program /usr/bin/chromium --set-netns /var/run/netns/vpn1
-...
-iddqd$ runnsctl -s
+iddqd$ runnsctl --program /usr/bin/chromium --set-netns /var/run/netns/vpnWork
 ```
 
 To clean-up:
 ```shell
-root$ clean-net --name vpn1 -f
+root$ clean-net --name vpnWork -f
+root$ runnsctl -s
 ```
 
 ### Run tmux session inside network namespace
@@ -143,7 +153,7 @@ NetworkInterfaceBlacklist = vmnet,vboxnet,virbr,ifb,ve-,vb-,vpn
 
 Thanks for the nice font [11] by Amazingmax which is used in the logo.
 
-## Refs
+## References
 1 -- https://lwn.net/Articles/580893
 
 2 -- https://lwn.net/Articles/237087
