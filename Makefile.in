@@ -17,7 +17,7 @@ $(DAEMON): runns.o
 $(CLIENT): client.o
 	$(CC) -o $@ $<
 
-.PHONY: client
+.PHONY: clean
 clean:
 	rm -f $(DAEMON) $(CLIENT) *.o
 
