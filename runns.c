@@ -48,7 +48,7 @@ char **args = 0;
 char **envs = 0;
 int *glob_pid = 0;
 char runns_socket[PATH_MAX] = DEFAULT_RUNNS_SOCKET;
-char *runns_socket_dir;
+char runns_socket_dir[PATH_MAX] = {0};
 enum is_default_dir {default_dir, not_default_dir} defdir = default_dir;
 
 int
@@ -65,6 +65,9 @@ free_tvars();
 
 int
 create_ptms();
+
+int
+clean_socket();
 
 struct option opts[] =
 {
@@ -131,7 +134,10 @@ main(int argc, char **argv)
   struct passwd *pw = NULL;
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = {0}};
   memcpy(addr.sun_path, runns_socket, strlen(runns_socket) + 1);
-  runns_socket_dir = dirname(runns_socket);
+  char *last_slash = strchr(runns_socket, '/');
+  if (!last_slash)
+    ERR("Can't deduce directory name in %s", runns_socket);
+  memcpy(runns_socket_dir, runns_socket, last_slash - runns_socket);
 
   // Check the root
   if (getuid() != 0)
@@ -152,8 +158,22 @@ main(int argc, char **argv)
   umask(0022);
   if (defdir == default_dir)
   {
-    if (mkdir(runns_socket_dir, 0755) < 0)
-      ERR("Can't create directory %s", runns_socket_dir);
+    if (!access(runns_socket, F_OK))
+    {
+      WARN("Old socket file %s has been found", runns_socket);
+      if (unlink(runns_socket))
+        ERR("Can't remove the socket file");
+      else
+        INFO("Old socket file has been removed");
+    }
+    else
+    {
+      if (access(runns_socket_dir, F_OK))
+      {
+        if (mkdir(runns_socket_dir, 0755) < 0)
+          ERR("Can't create directory %s", runns_socket_dir);
+      }
+    }
   }
 
   // Up daemon socket.
@@ -372,6 +392,11 @@ drop_priv(uid_t _uid, struct passwd **pw)
   }
   else
     ERR("Couldn't find user '%.32s'", (*pw)->pw_name);
+}
+
+void
+rmdef_if_exists()
+{
 }
 
 void
