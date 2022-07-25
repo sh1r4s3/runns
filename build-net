@@ -5,6 +5,11 @@
 # SPDX-License-Identifier: MIT
 #
 
+fatal() {
+    printf "fatal error: %s\n" "${1-}"
+    exit 1
+}
+
 # Help message
 help()
 {
@@ -48,6 +53,7 @@ OUT=
 CONFIG=/etc/runns.conf
 SECTION=
 RESOLVE=
+TYPE_DEF=
 while :
 do
     case "$1" in
@@ -78,15 +84,27 @@ if [ -n "$SECTION" ]; then
     [ -n "$OUT" ] || OUT="$(read_section InterfaceOut)"
     # Read resolve.conf
     [ -n "$RESOLVE" ] || RESOLVE="$(read_section Resolve)"
+    # Read the type
+    TYPE="$(read_section Type)"
 fi
 
-# If NS is empty set the default value "vpn$MAXNS"
-if [ -z "$NS" ]; then
-    MAXNS=$(find /var/run/netns/ -maxdepth 1 -type f -regex '.*/vpn[0-9]+' -printf '%f\n' |
-                awk 'BEGIN{max=0} match($0, /[0-9]+/){n=substr($0, RSTART, RLENGTH); if (max<n) {max=n}} END{print ++n}')
-    [ -n "$MAXNS" ] || MAXNS=1
-    NS="vpn$MAXNS"
-fi
+[ -n "$NS" ] || fatal "Please set network namespace name"
+MAXNS="$(find /var/run/netns/ -maxdepth 1 -type f -name "runns_*" | wc -l)"
+NS="runns_$NS"
+
+# Check that we have correct type
+[ -n "${TYPE:-}" ] || TYPE=$TYPE_DEF
+case "$TYPE" in
+    openvpn)
+        VPN="$(read_section VPN)"
+        [ -n "$VPN" ] || fatal "Type is $TYPE but VPN is not found"
+        ;;
+    bin)
+        BIN="$(read_section BIN)"
+        [ -n "$BIN" ] || fatal "Type is $TYPE but BIN is not found"
+        ;;
+esac
+
 # Set IPv4 third octet
 IP4C="${MAXNS:-0}"
 
@@ -137,9 +155,12 @@ iptables -A FORWARD -i $INT -o $OUT -j ACCEPT
 iptables -A FORWARD -o $INT -i $OUT -j ACCEPT
 
 # Launch commands in the new network namespace
-awk -F '=' -v section="[$SECTION]" '
-BEGIN{ IGNORECASE = 1}
-$0==section { flag=1; next }
-/\[/{ flag=0; next }
-flag && $1=="vpn"{ print $2 }
-' $CONFIG | (while read arg; do ip netns exec "$NS" openvpn --daemon "openvpn-$NS" --config "$arg"; done)
+case "$TYPE" in
+    openvpn)
+        ip netns exec "$NS" openvpn --daemon "openvpn-$NS" --config "$arg"
+        ;;
+    bin)
+        [ -x "$BIN" ] || fatal "$BIN is not executable"
+        ip netns exec "$NS" "$BIN"
+esac
+
