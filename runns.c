@@ -23,16 +23,20 @@
 
 // Emit log message
 #define ERR(format, ...) \
-    { \
+    do { \
       syslog(LOG_INFO | LOG_DAEMON, "runns.c:%d / errno=%d / " format "\n", __LINE__, errno, ##__VA_ARGS__); \
       stop_daemon(0); \
-    }
+    } while (0)
 
 #define WARN(format, ...) \
-      syslog(LOG_INFO | LOG_DAEMON, "runns.c:%d / warning / " format "\n", __LINE__, ##__VA_ARGS__);
+    do { \
+      syslog(LOG_INFO | LOG_DAEMON, "runns.c:%d / warning / " format "\n", __LINE__, ##__VA_ARGS__); \
+    } while (0)
 
 #define INFO(format, ...) \
-      syslog(LOG_INFO | LOG_DAEMON, "runns.c:%d / info / " format "\n", __LINE__, ##__VA_ARGS__);
+    { \
+      syslog(LOG_INFO | LOG_DAEMON, "runns.c:%d / info / " format "\n", __LINE__, ##__VA_ARGS__); \
+    } while (0)
 
 struct runns_header hdr = {0};
 int sockfd = 0;
