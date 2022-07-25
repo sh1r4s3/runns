@@ -395,11 +395,6 @@ drop_priv(uid_t _uid, struct passwd **pw)
 }
 
 void
-rmdef_if_exists()
-{
-}
-
-void
 stop_daemon(int flag)
 {
   INFO("runns daemon going down");
