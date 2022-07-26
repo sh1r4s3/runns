@@ -134,7 +134,7 @@ main(int argc, char **argv)
   struct passwd *pw = NULL;
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = {0}};
   memcpy(addr.sun_path, runns_socket, strlen(runns_socket) + 1);
-  char *last_slash = strchr(runns_socket, '/');
+  char *last_slash = strrchr(runns_socket, '/');
   if (!last_slash)
     ERR("Can't deduce directory name in %s", runns_socket);
   memcpy(runns_socket_dir, runns_socket, last_slash - runns_socket);
