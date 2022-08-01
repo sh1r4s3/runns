@@ -112,6 +112,7 @@ static void switch_ns(int sockfd, int ns_fd) {
         dup2(new_sockfd, sockfd);
         close(new_sockfd);
     }
+    setns(ns_def_fd, CLONE_NEWNET);
 }
 
 int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
