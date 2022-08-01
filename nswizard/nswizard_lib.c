@@ -107,8 +107,11 @@ static void switch_ns(int sockfd, int ns_fd) {
     DEBUG("%s switching to netns_fd=%d for sockfd=%d", __func__, ns_fd, sockfd);
     setns(ns_fd, CLONE_NEWNET);
     close(sockfd);
-    int new_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    int new_sockfd = socket(AF_INET, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
+    int s[] = {1};
+    setsockopt(new_sockfd, SOL_SOCKET, SO_REUSEADDR, s, 4);
     if (new_sockfd != sockfd) {
+        DEBUG("new_sockfd != sockfd");
         dup2(new_sockfd, sockfd);
         close(new_sockfd);
     }
@@ -116,7 +119,7 @@ static void switch_ns(int sockfd, int ns_fd) {
 }
 
 int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
-    DEBUG("%s enter", __func__);
+    DEBUG("%s enter with sockfd=%d", __func__, sockfd);
     if (addrlen == sizeof(struct sockaddr_in)) {
         const struct sockaddr_in *ipaddr = (const struct sockaddr_in *)addr;
         for (int i = 0; i < netns_size; ++i) {
@@ -127,7 +130,10 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
                 switch_ns(sockfd, ns[i].fd);
         }
     }
-    return bind_orig(sockfd, addr, addrlen);
+    DEBUG("%s exiting with sockfd=%d", __func__, sockfd);
+    int ret = bind_orig(sockfd, addr, addrlen);
+    DEBUG("%s bind_orig ret=%d errno=%d", __func__, ret, errno);
+    return ret;
 }
 
 #if 0
