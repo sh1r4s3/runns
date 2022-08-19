@@ -145,7 +145,7 @@ static void switch_ns(int sockfd, int ns_fd) {
     close(sockfd);
     int new_sockfd = socket(AF_INET, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
     int s[] = {1};
-    setsockopt(new_sockfd, SOL_SOCKET, SO_REUSEADDR, s, 4);
+    setsockopt(new_sockfd, SOL_SOCKET, SO_REUSEADDR, s, sizeof(s));
     if (new_sockfd != sockfd) {
         DEBUG("new_sockfd != sockfd");
         dup2(new_sockfd, sockfd);
