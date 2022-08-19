@@ -139,11 +139,11 @@ void wizard_lib_deinit() {
     free(ns);
 }
 
-static void switch_ns(int sockfd, int ns_fd) {
+static void switch_ns(int sockfd, int ns_fd, sa_family_t family) {
     DEBUG("%s switching to netns_fd=%d for sockfd=%d", __func__, ns_fd, sockfd);
     setns(ns_fd, CLONE_NEWNET);
     close(sockfd);
-    int new_sockfd = socket(AF_INET, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
+    int new_sockfd = socket(family, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
     int s[] = {1};
     setsockopt(new_sockfd, SOL_SOCKET, SO_REUSEADDR, s, sizeof(s));
     if (new_sockfd != sockfd) {
@@ -181,7 +181,7 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
         DEBUG("%s cmp 0x%x with 0x%x", __func__, *((int *)ns[i].ip), *((int *)ip));
         if (memcmp((void *)ns[i].ip, ip, family == AF_INET ? sizeof(struct in_addr) : sizeof(struct in6_addr)) == 0) {
             DEBUG("%s switching netns to %d", __func__, ns[i].fd);
-            switch_ns(sockfd, ns[i].fd);
+            switch_ns(sockfd, ns[i].fd, family);
             break;
         }
     }
