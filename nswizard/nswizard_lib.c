@@ -106,7 +106,7 @@ void wizard_lib_init() {
     }
 
     DEBUG("found nssz=%d nssz_ipv6=%d", nssz, nssz_ipv6);
-    ns = malloc(sizeof(ns)*(nssz + nssz_ipv6)); // TODO: check for NULL
+    ns = malloc(sizeof(struct netns)*(nssz + nssz_ipv6)); // TODO: check for NULL
     for (int i = 0; i < nssz; ++i) {
         sprintf(buf, ENV_LISTNER "_%d", i);
         DEBUG("%s buf is %s", __func__, buf);
@@ -117,7 +117,7 @@ void wizard_lib_init() {
         }
         add_netns(ip, AF_INET);
     }
-    for (int i = 0; i < nssz; ++i) {
+    for (int i = 0; i < nssz_ipv6; ++i) {
         sprintf(buf, ENV_LISTNER_IPV6 "_%d", i);
         DEBUG("%s buf is %s", __func__, buf);
         char *ip = getenv(buf);
