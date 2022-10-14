@@ -140,10 +140,15 @@ void wizard_lib_deinit() {
 }
 
 static void switch_ns(int sockfd, int ns_fd, sa_family_t family) {
-    DEBUG("%s switching to netns_fd=%d for sockfd=%d", __func__, ns_fd, sockfd);
+    int type;
+    int length = sizeof(int);
+    getsockopt(sockfd, SOL_SOCKET, SO_TYPE, &type, &length);
+
+    DEBUG("%s switching to netns_fd=%d for sockfd=%d(type=%d)", __func__, ns_fd, sockfd, type);
     setns(ns_fd, CLONE_NEWNET);
     close(sockfd);
-    int new_sockfd = socket(family, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
+
+    int new_sockfd = socket(family, type|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
     int s[] = {1};
     setsockopt(new_sockfd, SOL_SOCKET, SO_REUSEADDR, s, sizeof(s));
     if (new_sockfd != sockfd) {
