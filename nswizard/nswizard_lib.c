@@ -140,17 +140,94 @@ void wizard_lib_deinit() {
 }
 
 static void switch_ns(int sockfd, int ns_fd, sa_family_t family) {
+    int so_options_def[] = {SO_REUSEADDR, SO_REUSEPORT, SO_KEEPALIVE, SO_DONTROUTE};
+    int ip_options_def[] = {IP_TRANSPARENT};
+    int ipv6_options_def[] = {IPV6_TRANSPARENT};
+    int tcp_options_def[] = {TCP_NODELAY, TCP_CORK, TCP_DEFER_ACCEPT, TCP_QUICKACK};
     int type;
-    int length = sizeof(int);
-    getsockopt(sockfd, SOL_SOCKET, SO_TYPE, &type, &length);
+    socklen_t length = sizeof(int);
+    int err;
+    err = getsockopt(sockfd, SOL_SOCKET, SO_TYPE, &type, &length);
+    if (err < 0) {
+        WARN("can't get socket type, errno=%d", errno);
+    }
 
-    DEBUG("%s switching to netns_fd=%d for sockfd=%d(type=%d)", __func__, ns_fd, sockfd, type);
+    // Get CLOEXEC and NONBLOCK fd flags
+    int flags = fcntl(sockfd, F_GETFD);
+    if (flags < 0) {
+        ERR("can't get a socket's fd flags, errno=%d", errno);
+        return;
+    }
+
+    DEBUG("%s switching to netns_fd=%d for sockfd=%d(type=%d) fd_flags=%d", __func__, ns_fd, sockfd, type, flags);
     setns(ns_fd, CLONE_NEWNET);
     close(sockfd);
 
-    int new_sockfd = socket(family, type|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
-    int s[] = {1};
-    setsockopt(new_sockfd, SOL_SOCKET, SO_REUSEADDR, s, sizeof(s));
+    int new_sockfd = socket(family, type, 0);
+    if (fcntl(new_sockfd, F_SETFD, flags) < 0) {
+        ERR("can't set the new socket's flags, errno=%d", errno);
+        close(sockfd);
+        return;
+    }
+
+    // SO socket options
+    for (int iopt = 0; iopt < sizeof(so_options_def)/sizeof(int); ++iopt) {
+        int arg;
+        socklen_t arg_sz = sizeof(arg);
+        err = getsockopt(new_sockfd, SOL_SOCKET, so_options_def[iopt], &arg, &arg_sz);
+        if (err < 0) {
+            WARN("can't get a socket option %d, errno=%d", so_options_def[iopt], errno);
+            continue;
+        }
+        DEBUG("SOL_SOCKET: opt=%d int_value=%d size=%d", so_options_def[iopt], arg, arg_sz);
+        err = setsockopt(new_sockfd, SOL_SOCKET, so_options_def[iopt], &arg, sizeof(arg));
+        if (err < 0) {
+            WARN("can't set a socket option %d, errno=%d", so_options_def[iopt], errno);
+        }
+    }
+    // IP socket options
+    int *ip_options = ip_options_def;
+    int ip_level = IPPROTO_IP;
+    int ip_options_len = sizeof(ip_options_def)/sizeof(int);
+    char family_char = '4';
+    if (family == AF_INET6) {
+        ip_options = ipv6_options_def;
+        ip_level = IPPROTO_IPV6;
+        ip_options_len = sizeof(ipv6_options_def)/sizeof(int);
+        family_char = '6';
+    }
+    for (int iopt = 0; iopt < ip_options_len; ++iopt) {
+        int arg;
+        socklen_t arg_sz = sizeof(arg);
+        err = getsockopt(new_sockfd, ip_level, ip_options[iopt], &arg, &arg_sz);
+        if (err < 0) {
+            WARN("can't get a IPv%c option %d, errno=%d", family_char, ip_options[iopt], errno);
+            continue;
+        }
+        DEBUG("IPPROTO_IPV%c: opt=%d int_value=%d size=%d", family_char, ip_options[iopt], arg, arg_sz);
+        err = setsockopt(new_sockfd, ip_level, ip_options[iopt], &arg, sizeof(arg));
+        if (err < 0) {
+            WARN("can't set a IPv%c option %d, errno=%d", family_char, ip_options[iopt], errno);
+        }
+    }
+    // TCP socket options
+    if (type & SOCK_STREAM) {
+        for (int iopt = 0; iopt < sizeof(tcp_options_def)/sizeof(int); ++iopt) {
+            int arg;
+            socklen_t arg_sz = sizeof(arg);
+            err = getsockopt(new_sockfd, IPPROTO_TCP, ip_options_def[iopt], &arg, &arg_sz);
+            if (err < 0) {
+                WARN("can't get a TCP option %d, errno=%d", tcp_options_def[iopt], errno);
+                continue;
+            }
+            DEBUG("IPPROTO_TCP: opt=%d int_value=%d size=%d", tcp_options_def[iopt], arg, arg_sz);
+            err = setsockopt(new_sockfd, IPPROTO_TCP, ip_options_def[iopt], &arg, sizeof(arg));
+            if (err < 0) {
+                WARN("can't set a TCP option %d, errno=%d", tcp_options_def[iopt], errno);
+            }
+        }
+    }
+    // Fix socket fd
     if (new_sockfd != sockfd) {
         DEBUG("new_sockfd != sockfd");
         dup2(new_sockfd, sockfd);
