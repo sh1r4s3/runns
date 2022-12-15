@@ -5,11 +5,13 @@ PREFIX=@prefix@
 CFLAGS=@CFLAGS@
 DAEMON=runns
 CLIENT=runnsctl
+LIBRUNNS_ENABLE=@LIBRUNNS@
+HELPER_LIB=$(if $(filter-out $(LIBRUNNS_ENABLE),no),librunns.so)
 HELPER=build-net clean-net
 _ := $() $()
 comma := ,
 
-all: $(DAEMON) $(CLIENT)
+all: $(DAEMON) $(CLIENT) $(HELPER_LIB)
 
 $(DAEMON): runns.o
 	$(CC) -o $@ $<
@@ -17,9 +19,12 @@ $(DAEMON): runns.o
 $(CLIENT): client.o
 	$(CC) -o $@ $<
 
+$(HELPER_LIB): librunns.o
+	$(CC) -o $@ -shared -fPIC $<
+
 .PHONY: clean
 clean:
-	rm -f $(DAEMON) $(CLIENT) *.o
+	rm -f $(DAEMON) $(CLIENT) $(HELPER_LIB) *.o
 
 .PHONY: install
 install: $(DAEMON) $(CLIENT) $(HELPER)

@@ -13,7 +13,11 @@ AC_ARG_ENABLE(debug,
                yes) debug=true  ;;
                no)  debug=false ;;
                *)   AC_MSG_ERROR([bad value ${enablevalue} for --enable-debug]) ;;
-             esac], [debug=false])
+               esac], [debug=false])
+
+dnl Optional librunns
+AC_ARG_WITH(librunns,
+            AS_HELP_STRING([--with-librunns],[build experimental librunns, default: no]), [librunns="$withval"], [librunns=no])
 
 dnl Check dependences
 echo "Cheking dependences"
@@ -25,11 +29,13 @@ AC_CHECK_TOOL(GAWK, gawk)
 dnl Disable all CFLAGS if it was not declarated
 if [ test -z "$CFLAGS"; ] then
   if [ test "x$debug" == "xtrue" ]; then
-    CFLAGS="-g -O0"
+    CFLAGS="-g -O0 -DLIBRUNNS_DEBUG"
   else
     CFLAGS="-O2"
   fi
 fi
+
+AC_SUBST(LIBRUNNS, "$librunns")
 
 AC_PROG_CC
 
