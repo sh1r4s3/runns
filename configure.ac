@@ -3,7 +3,7 @@ dnl Process this file in order to make a configure script
 dnl
 
 dnl Setup autoconf
-AC_INIT([runns], [1.4], [coffe92@gmail.com])
+AC_INIT([runns], [1.41], [sh1r4s3@mail.si-head.nl], [runns], [https://github.com/sh1r4s3/runns])
 dnl AM_INIT_AUTOMAKE
 
 dnl Debug option
