@@ -52,9 +52,9 @@
 #endif
 
 typedef enum {
+    L4_PROTOCOL_UNK = 0,
     L4_PROTOCOL_TCP,
-    L4_PROTOCOL_UDP,
-    L4_PROTOCOL_UNK
+    L4_PROTOCOL_UDP
 } L4_PROTOCOLS;
 
 struct netns {
