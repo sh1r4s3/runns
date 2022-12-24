@@ -19,7 +19,7 @@ $(DAEMON): runns.o
 $(CLIENT): client.o
 	$(CC) -o $@ $<
 
-$(HELPER_LIB): librunns.o
+$(HELPER_LIB): librunns.c
 	$(CC) -o $@ -shared -fPIC $<
 
 .PHONY: clean

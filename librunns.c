@@ -28,13 +28,13 @@
 // Emit log message
 #define ERR(format, ...) \
     do { \
-        printf(INLOG_NAME ":%d / errno=%d / " format "\n", __LINE__, errno, ##__VA_ARGS__); \
+        fprintf(stderr, INLOG_NAME ":%d / errno=%d / " format "\n", __LINE__, errno, ##__VA_ARGS__); \
         exit(0); \
     } while (0)
 
 #define WARN(format, ...) \
     do { \
-        printf(INLOG_NAME ":%d / warning / " format "\n", __LINE__, ##__VA_ARGS__); \
+        fprintf(stderr, INLOG_NAME ":%d / warning / " format "\n", __LINE__, ##__VA_ARGS__); \
     } while (0)
 
 #define INFO(format, ...) \
