@@ -29,7 +29,7 @@ AC_CHECK_TOOL(GAWK, gawk)
 dnl Disable all CFLAGS if it was not declarated
 if [ test -z "$CFLAGS"; ] then
   if [ test "x$debug" == "xtrue" ]; then
-    CFLAGS="-g -O0 -DLIBRUNNS_DEBUG"
+    CFLAGS="-g -O0 -DENABLE_DEBUG"
   else
     CFLAGS="-O2"
   fi

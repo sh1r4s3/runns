@@ -42,7 +42,7 @@
         printf(INLOG_NAME ":%d / info / " format "\n", __LINE__, ##__VA_ARGS__); \
     } while (0)
 
-#ifdef LIBRUNNS_DEBUG
+#ifdef ENABLE_DEBUG
 #  define DEBUG(format, ...) \
     do { \
         printf(INLOG_NAME ":%d / debug / " format "\n", __LINE__, ##__VA_ARGS__); \
