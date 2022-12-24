@@ -70,6 +70,43 @@ static int ns_def_fd = 0;
 static int netns_size = 0;
 static struct netns *ns = NULL;
 
+// TODO: check whether we need static here or it is redundant?
+static inline void parse_l4_proto(char *l4_proto_str, L4_PROTOCOLS *l4_proto, sa_family_t *family) {
+    // Basic checks and calc the size of the str
+    if (!l4_proto_str || !l4_proto || !family) {
+        ERR("NULL slipped in 0x%x 0x%x 0x%x", l4_proto_str, l4_proto, family);
+    }
+    *l4_proto_str++ = '\0';
+    *family = AF_INET;
+    *l4_proto = L4_PROTOCOL_UNK;
+    size_t l4_proto_str_sz = strlen(l4_proto_str);
+    if (l4_proto_str_sz != 4) {
+        WARN("L4 protocol has wrong size %d != 4. Skip", l4_proto_str_sz);
+        return;
+    }
+    // Get IP family
+    switch (l4_proto_str[3]) {
+        case '4':
+            *family = AF_INET;
+            break;
+        case '6':
+            *family = AF_INET6;
+            break;
+        default:
+            WARN("L4 protocol has wrong IP family %c (only 4 and 6 are allowed). Fallback to 4", l4_proto_str[3]);
+    }
+    // Get proto
+    if (strncmp(l4_proto_str, "tcp", 3) == 0) {
+        *l4_proto = L4_PROTOCOL_TCP;
+    } else if (strncmp(l4_proto_str, "udp", 3) == 0) {
+        *l4_proto = L4_PROTOCOL_UDP;
+    } else {
+        WARN("L4 protocol %s is not correct");
+    }
+
+    DEBUG("l4_proto_str=%s l4_proto=%d family=%d", l4_proto_str, l4_proto, family);
+}
+
 static void add_netns(char *ip, sa_family_t family) {
     char *port = NULL, *netns_path = NULL;
     port = strchr(ip, ENV_SEPARATOR);
@@ -83,16 +120,8 @@ static void add_netns(char *ip, sa_family_t family) {
     // An optional field for level 4 protocols accocording to the OSI
     char *l4_proto_str = strchr(netns_path + 1, ENV_SEPARATOR);
     L4_PROTOCOLS l4_proto = L4_PROTOCOL_UNK;
-    if (l4_proto_str) {
-        *l4_proto_str++ = '\0';
-        if (strcmp(l4_proto_str, "tcp") == 0) {
-            l4_proto = L4_PROTOCOL_TCP;
-        } else if (strcmp(l4_proto_str, "udp") == 0) {
-            l4_proto = L4_PROTOCOL_UDP;
-        }
-
-        DEBUG("l4_proto_str=%s l4_proto=%d", l4_proto_str, l4_proto);
-    }
+    family = AF_INET;
+    parse_l4_proto(l4_proto_str, &l4_proto, &family);
 
     inet_pton(family, ip, ns[netns_size].ip);
     ns[netns_size].port = atoi(port);
