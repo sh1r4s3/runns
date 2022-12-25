@@ -20,6 +20,8 @@
 #include <string.h>
 #include <signal.h>
 #include <termios.h>
+#include <netinet/in.h>
+#include <fcntl.h>
 
 #define STR_TOKEN(x) #x
 
@@ -54,4 +56,21 @@ struct runns_child
   uid_t uid;
   pid_t pid;
 };
+
+// Structures for librunns
+typedef enum {
+    L4_PROTOCOL_UNK = 0,
+    L4_PROTOCOL_TCP,
+    L4_PROTOCOL_UDP
+} L4_PROTOCOLS;
+
+struct netns {
+    unsigned char ip[sizeof(struct in6_addr)];
+    char *netns;
+    sa_family_t family; // AF_INET or AF_INET6
+    L4_PROTOCOLS proto; // TCP, UDP, cosmoshroom radiation
+    in_port_t port;
+    struct netns *pnext;
+};
+
 #endif
