@@ -14,9 +14,32 @@
 
 void cleanup();
 
+// Emit log message
 #define ERR(format, ...) \
-      fprintf(stderr, "client.c:%d / errno=%d / " format "\n", __LINE__, errno, ##__VA_ARGS__); \
-      ret = EXIT_FAILURE;
+    do { \
+        fprintf(stderr, CLIENT_NAME ":%d / errno=%d / " format "\n", __LINE__, errno, ##__VA_ARGS__); \
+        cleanup(); \
+        exit(0); \
+    } while (0)
+
+#define WARN(format, ...) \
+    do { \
+        fprintf(stderr, CLIENT_NAME ":%d / warning / " format "\n", __LINE__, ##__VA_ARGS__); \
+    } while (0)
+
+#define INFO(format, ...) \
+    do { \
+        printf(CLIENT_NAME ":%d / info / " format "\n", __LINE__, ##__VA_ARGS__); \
+    } while (0)
+
+#ifdef ENABLE_DEBUG
+#  define DEBUG(format, ...) \
+    do { \
+        printf(CLIENT_NAME ":%d / debug / " format "\n", __LINE__, ##__VA_ARGS__); \
+    } while (0)
+#else
+#  define DEBUG(...)
+#endif
 
 enum wide_opts {OPT_SET_NETNS = 0xFF01, OPT_SOCKET = 0xFF02};
 enum operation_mode {OP_MODE_UNK, OP_MODE_NETNS, OP_MODE_FWD_PORT};
