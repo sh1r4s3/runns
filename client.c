@@ -42,11 +42,9 @@ void cleanup();
 #endif
 
 enum wide_opts {OPT_SET_NETNS = 0xFF01, OPT_SOCKET = 0xFF02};
-enum operation_mode {OP_MODE_UNK, OP_MODE_NETNS, OP_MODE_FWD_PORT};
 
 static int netns_size = 0;
 static struct netns *ns_head = NULL;
-static enum operation_mode op_mode = OP_MODE_UNK;
 static int sockfd = 0;
 
 struct option opts[] =
@@ -125,11 +123,14 @@ static inline void parse_l4_proto(char *l4_proto_str, L4_PROTOCOLS *l4_proto, sa
 }
 
 static void add_netns(char *ip) {
+    if (!ip) {
+        ERR("forward string is empty");
+    }
     char *port = NULL, *netns_path = NULL;
     port = strchr(ip, ENV_SEPARATOR);
     if (port) netns_path = strchr(port + 1, ENV_SEPARATOR);
     if (!port || !netns_path) { // Mandatory fields
-        DEBUG("%s can't parse %s", __func__, ip);
+        WARN("%s can't parse %s", __func__, ip);
         return;
     }
     *port++ = '\0';
@@ -177,7 +178,7 @@ main(int argc, char **argv)
   struct runns_header hdr = {0};
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = DEFAULT_RUNNS_SOCKET};
   const char *prog = 0, *netns = 0, *args = 0;
-  const char *optstring = "hp:vslt";
+  const char *optstring = "hp:vsltf:";
   int opt, len;
   char verbose = 0;
   int ret = EXIT_SUCCESS;
@@ -206,20 +207,20 @@ main(int argc, char **argv)
         hdr.flag |= RUNNS_NPTMS;
         break;
       case 'f':
-        if (op_mode == OP_MODE_NETNS) {
+        if (hdr.op_mode == OP_MODE_NETNS) {
             ERR("--forward-port and --set-netns mutually exclusive");
         }
-        op_mode = OP_MODE_FWD_PORT;
+        hdr.op_mode = OP_MODE_FWD_PORT;
         add_netns(optarg);
         break;
       case 'v':
         verbose = 1;
         break;
       case OPT_SET_NETNS:
-        if (op_mode == OP_MODE_FWD_PORT) {
+        if (hdr.op_mode == OP_MODE_FWD_PORT) {
             ERR("--forward-port and --set-netns mutually exclusive");
         }
-        op_mode = OP_MODE_NETNS;
+        hdr.op_mode = OP_MODE_NETNS;
         netns = optarg;
         hdr.netns_sz = strlen(netns) + 1;
         break;
@@ -234,9 +235,9 @@ main(int argc, char **argv)
     }
   }
 
-  // TODO
+  // TODO: remove this debugging output
 #if 0
-  if (op_mode == OP_MODE_FWD_PORT) {
+  if (hdr.op_mode == OP_MODE_FWD_PORT) {
     for (struct netns *p = ns_head; p != NULL; p = p->pnext) {
       INFO("0x%x %s %s %d %d", *((int *)p->ip), p->netns, p->family == AF_INET ? "AF_INET" : "AF_INET6", p->proto, p->port);
     }
@@ -244,16 +245,28 @@ main(int argc, char **argv)
   }
 #endif
 
-  // Not allow empty strings
-  if (!hdr.flag && (!netns || !prog))
+  if (hdr.op_mode == OP_MODE_FWD_PORT && !ns_head) {
+    ERR("Nothing to forward");
+  }
+  if (hdr.op_mode == OP_MODE_NETNS && !hdr.flag && (!netns || !prog)) {
     ERR("Please check that you set network namespace and program");
+  }
 
   // Output parameters in the case of verbose option
-  if (verbose && !hdr.flag)
-  {
-    printf("network namespace to switch is: %s\n" \
-           "program to run: %s\n", \
-           netns, prog);
+  if (netns && verbose) {
+    if (hdr.flag & (RUNNS_STOP | RUNNS_LIST)) { // flags related to runns
+                                                // daemon
+        char *str = NULL;
+
+        if (hdr.flag & RUNNS_STOP) str = "RUNNS_STOP";
+        if (hdr.flag & RUNNS_LIST) str = "RUNNS_LIST";
+        if (str)
+            printf("Command to runns daemon: %s\n", str);
+    } else {
+        printf("network namespace to switch is: %s\n" \
+               "program to run: %s\n", \
+               netns, prog);
+    }
   }
 
   // Count number of environment variables

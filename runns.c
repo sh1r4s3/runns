@@ -255,6 +255,18 @@ main(int argc, char **argv)
       continue;
     }
 
+    // Read the operational mode
+    INFO("op mode = %d", hdr.op_mode);
+    if (hdr.op_mode & OP_MODE_UNK) {
+      WARN("Skipping. Unknown op mode");
+    }
+
+    if (hdr.op_mode & OP_MODE_FWD_PORT) {
+      // TODO: Handle OP_MODE_FWD_PORT
+      INFO("Nothing can be done for OP_MODE_FWD_PORT yet. Skip");
+      continue;
+    }
+
     // Read program name and network namespace name
     program = (char *)malloc(hdr.prog_sz);
     netns = (char *)malloc(hdr.netns_sz);

@@ -40,6 +40,12 @@
 #define RUNNS_LIST        (int)1 << 2
 #define RUNNS_NPTMS       (int)1 << 3
 
+typedef enum {
+  OP_MODE_UNK = 0,
+  OP_MODE_NETNS,
+  OP_MODE_FWD_PORT
+} OP_MODES;
+
 // common header for server and client
 struct runns_header
 {
@@ -49,6 +55,7 @@ struct runns_header
   size_t args_sz;
   unsigned int flag;
   struct termios tmode;
+  OP_MODES op_mode;
 };
 
 struct runns_child
