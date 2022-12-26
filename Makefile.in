@@ -29,7 +29,7 @@ clean:
 .PHONY: install
 install: $(DAEMON) $(CLIENT) $(HELPER)
 	mkdir -p $(DESTDIR)/$(PREFIX)/bin
-	cp {$(subst $(_),$(comma),$^)} $(DESTDIR)/$(PREFIX)/bin/
+	cp $^ $(DESTDIR)/$(PREFIX)/bin/
 	chmod 755 $(DESTDIR)/$(PREFIX)/bin/{$(subst $(_),$(comma),$^)}
 
 .PHONY: uninstall
