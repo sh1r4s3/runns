@@ -111,12 +111,12 @@ static inline void parse_l4_proto(char *l4_proto_str, L4_PROTOCOLS *l4_proto, sa
             WARN("L4 protocol has wrong IP family %c (only 4 and 6 are allowed). Fallback to 4", l4_proto_str[3]);
     }
     // Get proto
-    if (strncmp(l4_proto_str, "tcp", 3) == 0) {
+    if (strncasecmp(l4_proto_str, "tcp", 3) == 0) {
         *l4_proto = L4_PROTOCOL_TCP;
-    } else if (strncmp(l4_proto_str, "udp", 3) == 0) {
+    } else if (strncasecmp(l4_proto_str, "udp", 3) == 0) {
         *l4_proto = L4_PROTOCOL_UDP;
     } else {
-        WARN("L4 protocol %s is not correct");
+        WARN("L4 protocol %s is not correct", l4_proto_str);
     }
 
     DEBUG("l4_proto_str=%s l4_proto=%d family=%d", l4_proto_str, l4_proto, family);
