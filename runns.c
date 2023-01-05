@@ -259,6 +259,7 @@ main(int argc, char **argv)
     INFO("op mode = %d", hdr.op_mode);
     if (hdr.op_mode & OP_MODE_UNK) {
       WARN("Skipping. Unknown op mode");
+      continue;
     }
 
     if (hdr.op_mode & OP_MODE_FWD_PORT) {
