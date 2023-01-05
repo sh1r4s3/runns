@@ -50,6 +50,7 @@ int *glob_pid = 0;
 char runns_socket[PATH_MAX] = DEFAULT_RUNNS_SOCKET;
 char runns_socket_dir[PATH_MAX] = {0};
 enum is_default_dir {default_dir, not_default_dir} defdir = default_dir;
+struct ucred cred;
 
 int
 drop_priv(uid_t _uid, struct passwd **pw);
@@ -68,6 +69,10 @@ create_ptms();
 
 int
 clean_socket();
+
+int
+parse_flag(int data_sockfd);
+
 
 struct option opts[] =
 {
@@ -203,8 +208,7 @@ main(int argc, char **argv)
     int data_sockfd = accept(sockfd, 0, 0);
     if (data_sockfd == -1)
       ERR("Can't accept connection");
-    struct ucred cred;
-    socklen_t cred_len = (socklen_t)sizeof(struct ucred);
+    const socklen_t cred_len = (socklen_t)sizeof(struct ucred);
     if (getsockopt(data_sockfd, SOL_SOCKET, SO_PEERCRED, &cred, &cred_len) == -1)
     {
       WARN("Can't get user credentials");
@@ -216,44 +220,8 @@ main(int argc, char **argv)
     if (ret == -1)
       WARN("Can't read data");
 
-    // Stop daemon on demand.
-    if (hdr.flag & RUNNS_STOP)
-    {
-      if (cred.uid == 0)
-      {
-        INFO("closing");
-        close(data_sockfd);
-        stop_daemon(hdr.flag);
-      }
-      else
-      {
-        WARN("Client with %d UID tried to kill the daemon ", cred.uid);
-        continue;
-      }
-    }
-    // Transfer list of childs
-    if (hdr.flag & RUNNS_LIST)
-    { // TODO rets
-      INFO("uid=%d ask for pid list", cred.uid);
-      clean_pids();
-      // Count the number of jobs for uid
-      unsigned int jobs = 0;
-      for (int i = 0; i < childs_run; i++)
-      {
-        if (childs[i].uid == cred.uid)
-          ++jobs;
-      }
-
-      if (write(data_sockfd, (void *)&jobs, sizeof(jobs)) == -1)
-        ERR("Can't send number of jobs to the client %d", cred.uid);
-      for (unsigned int i = 0; i < jobs; i++)
-      {
-        if (write(data_sockfd, (void *)&childs[i], sizeof(struct runns_child)) == -1)
-          ERR("Can't send child info to the client %d", cred.uid);
-      }
-      close(data_sockfd);
+    if (parse_flag(data_sockfd))
       continue;
-    }
 
     // Read the operational mode
     INFO("op mode = %d", hdr.op_mode);
@@ -491,6 +459,51 @@ create_ptms()
   {
     WARN("Fail to dup2 pt for stderr, errno=%d", errno);
     return errno;
+  }
+
+  return 0;
+}
+
+int
+parse_flag(int data_sockfd) {
+  // Stop daemon on demand.
+  if (hdr.flag & RUNNS_STOP)
+  {
+    if (cred.uid == 0)
+    {
+      INFO("closing");
+      close(data_sockfd);
+      stop_daemon(hdr.flag); // Should never returns
+    }
+    else
+    {
+      WARN("Client with %d UID tried to kill the daemon ", cred.uid);
+      return 1;
+    }
+  }
+
+  // Transfer list of childs
+  if (hdr.flag & RUNNS_LIST)
+  { // TODO rets
+    INFO("uid=%d ask for pid list", cred.uid);
+    clean_pids();
+    // Count the number of jobs for uid
+    unsigned int jobs = 0;
+    for (int i = 0; i < childs_run; i++)
+    {
+      if (childs[i].uid == cred.uid)
+        ++jobs;
+    }
+
+    if (write(data_sockfd, (void *)&jobs, sizeof(jobs)) == -1)
+      ERR("Can't send number of jobs to the client %d", cred.uid);
+    for (unsigned int i = 0; i < jobs; i++)
+    {
+      if (write(data_sockfd, (void *)&childs[i], sizeof(struct runns_child)) == -1)
+        ERR("Can't send child info to the client %d", cred.uid);
+    }
+    close(data_sockfd);
+    return 1;
   }
 
   return 0;
