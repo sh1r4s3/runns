@@ -20,10 +20,11 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 
+#include "runns.h"
+
 #define INLOG_NAME "librunns"
 #define ENV_LISTNER "RUNNS_NETNS"
 #define ENV_LISTNER_IPV6 "RUNNS_NETNS_IPV6"
-#define ENV_SEPARATOR ';'
 
 // Emit log message
 #define ERR(format, ...) \
@@ -50,20 +51,6 @@
 #else
 #  define DEBUG(...)
 #endif
-
-typedef enum {
-    L4_PROTOCOL_UNK = 0,
-    L4_PROTOCOL_TCP,
-    L4_PROTOCOL_UDP
-} L4_PROTOCOLS;
-
-struct netns {
-    unsigned char ip[sizeof(struct in6_addr)];
-    int fd;
-    sa_family_t family; // AF_INET or AF_INET6
-    L4_PROTOCOLS proto; // TCP, UDP, cosmoshroom radiation
-    in_port_t port;
-};
 
 static int (*bind_orig)(int, const struct sockaddr *, socklen_t) = NULL;
 static int ns_def_fd = 0;

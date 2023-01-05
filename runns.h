@@ -32,6 +32,9 @@
 // Maximum number of childs
 #define MAX_CHILDS 1024
 
+// librunns
+#define ENV_SEPARATOR ':'
+
 // Definitions of the flag bits:
 // RUNNS_STOP -- wait for childs to exit and then exit.
 // RUNNS_LIST -- list childs runned by runns.
@@ -74,6 +77,7 @@ typedef enum {
 struct netns {
     unsigned char ip[sizeof(struct in6_addr)];
     char *netns;
+    int fd;
     sa_family_t family; // AF_INET or AF_INET6
     L4_PROTOCOLS proto; // TCP, UDP, cosmoshroom radiation
     in_port_t port;

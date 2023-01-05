@@ -10,7 +10,6 @@
 #include <limits.h>
 
 #define CLIENT_NAME "runnsctl"
-#define ENV_SEPARATOR ':'
 
 void cleanup();
 
