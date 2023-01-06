@@ -73,7 +73,7 @@ help_me()
 "-l|--list             list childs  \n"                               \
 "-p|--program <path>   program to run in desired netns  \n"           \
 "-t|--create-ptms      create control terminal  \n"                   \
-"-f|--forward-port     <ip>;<port>;<netns path>;<proto><ip family>\n" \
+"-f|--forward-port     <ip>:<port>:<netns path>:<proto><ip family>\n" \
 "                      <ip family> could be 4 or 6\n"                 \
 "                      <netns path> path to the netns fd\n"           \
 "--set-netns <path>    network namespace to switch  \n"               \
