@@ -22,6 +22,9 @@ $(CLIENT): client.o
 $(HELPER_LIB): librunns.c
 	$(CC) -o $@ -shared -fPIC $<
 
+tests/%: tests/%.c queue.c
+	$(CC) -I. -Itau/ -o $@ $^
+
 .PHONY: clean
 clean:
 	rm -f $(DAEMON) $(CLIENT) $(HELPER_LIB) *.o
