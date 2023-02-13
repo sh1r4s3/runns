@@ -13,24 +13,24 @@
 
 void cleanup();
 
-// Emit log message
+/*
+ * Macros for logging
+ */
 #define ERR(format, ...) \
     do { \
         fprintf(stderr, CLIENT_NAME ":%d / errno=%d / " format "\n", __LINE__, errno, ##__VA_ARGS__); \
         cleanup(); \
         exit(0); \
     } while (0)
-
 #define WARN(format, ...) \
     do { \
         fprintf(stderr, CLIENT_NAME ":%d / warning / " format "\n", __LINE__, ##__VA_ARGS__); \
     } while (0)
-
 #define INFO(format, ...) \
     do { \
         printf(CLIENT_NAME ":%d / info / " format "\n", __LINE__, ##__VA_ARGS__); \
     } while (0)
-
+// This macro could be set from the configure script
 #ifdef ENABLE_DEBUG
 #  define DEBUG(format, ...) \
     do { \
