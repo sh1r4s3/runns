@@ -16,7 +16,7 @@ all: $(DAEMON) $(CLIENT) $(HELPER_LIB)
 $(DAEMON): runns.o
 	$(CC) -o $@ $<
 
-$(CLIENT): client.o
+$(CLIENT): $(CLIENT).o
 	$(CC) -o $@ $<
 
 $(HELPER_LIB): librunns.c
