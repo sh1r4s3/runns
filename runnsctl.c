@@ -128,18 +128,18 @@ static void add_netns(char *ip) {
     if (port && (size_t)port < ((size_t)ip + ip_len))
         netns_path = strchr(port + 1, ENV_SEPARATOR);
     if (!port || !netns_path) { // Mandatory fields
-        WARN("%s can't parse %s", __func__, ip);
+        WARN("skipping %s -- port and netns_path are mandatory fields", ip);
         return;
     }
     *port++ = '\0';
     *netns_path++ = '\0';
-    // An optional field for level 4 protocols accocording to the OSI
+    // An optional field for level 4 protocols according to the OSI model
     char *l4_proto_str = strchr(netns_path + 1, ENV_SEPARATOR);
     L4_PROTOCOLS l4_proto = L4_PROTOCOL_UNK;
     sa_family_t family = AF_UNSPEC;
     parse_l4_proto(l4_proto_str, &l4_proto, &family);
 
-    // Create new
+    // Create a new netns
     struct netns *ns = (struct netns *)malloc(sizeof(struct netns));
     inet_pton(family, ip, ns->ip);
     ns->port = atoi(port);
@@ -147,9 +147,9 @@ static void add_netns(char *ip) {
     ns->family = family;
     ns->proto = l4_proto;
     ns->pnext = NULL;
-    DEBUG("%s adding port=%d ip=%s(0x%x), netns=%s, proto=%d", __func__, ns->port, ip, *((int *)ns->ip), ns->netns, ns->proto);
+    DEBUG("adding port=%d ip=%s(0x%x), netns=%s, proto=%d", ns->port, ip, *((int *)ns->ip), ns->netns, ns->proto);
     ++netns_size;
-    // Insert into list
+    // Insert into the list of netns
     if (ns_head) {
       struct netns *p;
       for (p = ns_head; p != NULL; p = p->pnext);
