@@ -50,8 +50,7 @@ typedef enum {
 } OP_MODES;
 
 // common header for server and client
-struct runns_header
-{
+struct runns_header {
   size_t prog_sz;
   size_t netns_sz;
   size_t env_sz;
@@ -61,8 +60,7 @@ struct runns_header
   OP_MODES op_mode;
 };
 
-struct runns_child
-{
+struct runns_child {
   uid_t uid;
   pid_t pid;
 };

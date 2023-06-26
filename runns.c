@@ -52,26 +52,13 @@ char runns_socket_dir[PATH_MAX] = {0};
 enum is_default_dir {default_dir, not_default_dir} defdir = default_dir;
 struct ucred cred;
 
-int
-drop_priv(uid_t _uid, struct passwd **pw);
-
-void
-stop_daemon(int flag);
-
-int
-clean_pids();
-
-void
-free_tvars();
-
-int
-create_ptms();
-
-int
-clean_socket();
-
-int
-parse_flag(int data_sockfd);
+int drop_priv(uid_t _uid, struct passwd **pw);
+void stop_daemon(int flag);
+int clean_pids();
+void free_tvars();
+int create_ptms();
+int clean_socket();
+int parse_flag(int data_sockfd);
 
 
 struct option opts[] =
@@ -82,9 +69,7 @@ struct option opts[] =
   { 0, 0, 0, 0 }
 };
 
-void
-help_me()
-{
+void help_me() {
   const char *hstr = \
 "runns [options]\n"                                                                          \
 "Options:\n"                                                                                 \
@@ -95,24 +80,20 @@ help_me()
   exit(EXIT_SUCCESS);
 }
 
-int
-main(int argc, char **argv)
-{
+
+int main(int argc, char **argv) {
   const char *optstring = "hs:";
   int opt;
   int len;
 
-  while ((opt = getopt_long(argc, argv, optstring, opts, 0)) != -1)
-  {
-    switch (opt)
-    {
+  while ((opt = getopt_long(argc, argv, optstring, opts, 0)) != -1) {
+    switch (opt) {
       case 'h':
         help_me();
         break;
       case 's':
         // Get absolute path
-        if (!realpath(dirname(optarg), runns_socket))
-        {
+        if (!realpath(dirname(optarg), runns_socket)) {
           fputs("Can't get a real path\n", stderr);
           ERR("Can't get a real path of the socket filename");
         }
@@ -124,8 +105,7 @@ main(int argc, char **argv)
                 basename(optarg),
                 PATH_MAX - len - 1 /* subtract len and new line */);
         len = strlen(runns_socket);
-        if (len >= RUNNS_MAXLEN)
-        {
+        if (len >= RUNNS_MAXLEN) {
           fputs("Socket file name is too long > " STR_TOKEN(RUNNS_MAXLEN) "\n", stderr);
           ERR("Socket file name length is greater than " STR_TOKEN(RUNNS_MAXLEN));
         }
@@ -145,8 +125,7 @@ main(int argc, char **argv)
   memcpy(runns_socket_dir, runns_socket, last_slash - runns_socket);
 
   // Check the root
-  if (getuid() != 0)
-  {
+  if (getuid() != 0) {
     extern FILE *stderr;
     fputs("Please run as a root user\n", stderr);
     ERR("Only root can run the runns daemon");
@@ -161,20 +140,16 @@ main(int argc, char **argv)
 
   // Set safe umask and create directory.
   umask(0022);
-  if (defdir == default_dir)
-  {
-    if (!access(runns_socket, F_OK))
-    {
+  if (defdir == default_dir) {
+    if (!access(runns_socket, F_OK)) {
       WARN("Old socket file %s has been found", runns_socket);
       if (unlink(runns_socket))
         ERR("Can't remove the socket file");
       else
         INFO("Old socket file has been removed");
     }
-    else
-    {
-      if (access(runns_socket_dir, F_OK))
-      {
+    else {
+      if (access(runns_socket_dir, F_OK)) {
         if (mkdir(runns_socket_dir, 0755) < 0)
           ERR("Can't create directory %s", runns_socket_dir);
       }
@@ -193,15 +168,14 @@ main(int argc, char **argv)
   if (!group)
     ERR("Can't get runns group\n");
   if (chown(addr.sun_path, 0, group->gr_gid) ||
-      chmod(addr.sun_path, 0775))
-  {
+      chmod(addr.sun_path, 0775)) {
+
     ERR("Can't chown/chmod");
   }
 
   INFO("runns daemon has started");
 
-  while (1)
-  {
+  while (1) {
     if (listen(sockfd, 16) == -1)
       ERR("Can't start listen socket %d (%s)", sockfd, addr.sun_path);
 
@@ -209,8 +183,7 @@ main(int argc, char **argv)
     if (data_sockfd == -1)
       ERR("Can't accept connection");
     const socklen_t cred_len = (socklen_t)sizeof(struct ucred);
-    if (getsockopt(data_sockfd, SOL_SOCKET, SO_PEERCRED, &cred, &cred_len) == -1)
-    {
+    if (getsockopt(data_sockfd, SOL_SOCKET, SO_PEERCRED, &cred, &cred_len) == -1) {
       WARN("Can't get user credentials");
       close(data_sockfd);
       continue;
@@ -246,16 +219,14 @@ main(int argc, char **argv)
     INFO("uid=%d program=%s netns=%s", cred.uid, program, netns);
 
     // Read argv for the program
-    if (hdr.args_sz)
-    {
+    if (hdr.args_sz) {
       hdr.args_sz += 2; // program name + null at the end
       args = (char **)malloc(hdr.args_sz*sizeof(char *));
       if (!args)
         ERR("Can't allocate memory (args = %p)", args);
       args[0] = program;
       args[hdr.args_sz - 1] = 0;
-      for (int i = 1; i < hdr.args_sz - 1; i++)
-      {
+      for (int i = 1; i < hdr.args_sz - 1; i++) {
         size_t sz;
         ret = read(data_sockfd, (void *)&sz, sizeof(size_t));
         args[i] = (char *)malloc(sz);
@@ -266,11 +237,9 @@ main(int argc, char **argv)
       args = 0;
 
     // Read environment variables
-    if (hdr.env_sz)
-    {
+    if (hdr.env_sz) {
       envs = (char **)malloc(++hdr.env_sz*sizeof(char *));
-      for (int i = 0; i < hdr.env_sz - 1; i++)
-      {
+      for (int i = 0; i < hdr.env_sz - 1; i++) {
         size_t env_sz;
         ret = read(data_sockfd, (void *)&env_sz, sizeof(size_t));
         envs[i] = (char *)malloc(env_sz);
@@ -284,19 +253,16 @@ main(int argc, char **argv)
     close(data_sockfd);
 
     clean_pids();
-    if (childs_run < MAX_CHILDS)
-    {
+    if (childs_run < MAX_CHILDS) {
       // Make fork
       pid_t child = fork();
       if (child == -1)
         ERR("Fail on fork");
 
       // Child
-      if (child == 0)
-      {
+      if (child == 0) {
         child = fork();
-        if (child != 0)
-        {
+        if (child != 0) {
           *glob_pid = child;
           exit(0);
         }
@@ -308,11 +274,9 @@ main(int argc, char **argv)
         setsid();
 
         // Redirect stdin, stdout, stderr to new PTS
-        if (hdr.flag & RUNNS_NPTMS)
-        {
+        if (hdr.flag & RUNNS_NPTMS) {
           int err;
-          if (err = create_ptms())
-          {
+          if (err = create_ptms()) {
             exit(err);
           }
         }
@@ -320,8 +284,7 @@ main(int argc, char **argv)
         int netfd = open(netns, 0);
         setns(netfd, CLONE_NEWNET);
         drop_priv(cred.uid, &pw);
-        if (execve(program, (char * const *)args, (char * const *)envs) == -1)
-        {
+        if (execve(program, (char * const *)args, (char * const *)envs) == -1) {
           WARN("Can not run %s, execve failed with errno=%d", program, errno);
           return EXIT_FAILURE;
         }
@@ -343,9 +306,7 @@ main(int argc, char **argv)
   return 0;
 }
 
-int
-drop_priv(uid_t _uid, struct passwd **pw)
-{
+int drop_priv(uid_t _uid, struct passwd **pw) {
   *pw = getpwuid(_uid);
   if (*pw) {
     uid_t uid = (*pw)->pw_uid;
@@ -362,8 +323,7 @@ drop_priv(uid_t _uid, struct passwd **pw)
           (unsigned long)gid);
     }
 
-    if (chdir((*pw)->pw_dir))
-    {
+    if (chdir((*pw)->pw_dir)) {
       ERR("Couldn't chdir to %s for '%.32s' uid=%lu gid=%lu",
           (*pw)->pw_dir,
           (*pw)->pw_name,
@@ -375,12 +335,10 @@ drop_priv(uid_t _uid, struct passwd **pw)
     ERR("Couldn't find user '%.32s'", (*pw)->pw_name);
 }
 
-void
-stop_daemon(int flag)
-{
+
+void stop_daemon(int flag) {
   INFO("runns daemon going down");
-  if (sockfd)
-  {
+  if (sockfd) {
     close(sockfd);
     unlink(runns_socket);
     if (defdir == default_dir)
@@ -393,9 +351,7 @@ stop_daemon(int flag)
   exit(ret);
 }
 
-int
-clean_pids()
-{
+int clean_pids() {
   for (unsigned int i = childs_run; i > 0 ; i--)
   {
     if (kill(childs[i - 1].pid, 0))
@@ -409,9 +365,8 @@ clean_pids()
   }
 }
 
-void
-free_tvars()
-{
+
+void free_tvars() {
   free(program);
   free(netns);
   if (args)
@@ -423,40 +378,33 @@ free_tvars()
   memset((void *)&hdr, 1, sizeof(hdr));
 }
 
-int
-create_ptms()
-{
+
+int create_ptms() {
   int ptmfd = open("/dev/ptmx", O_RDWR);
   char ptsname[0xff];
-  if (ptsname_r(ptmfd, ptsname, 0xff))
-  {
+  if (ptsname_r(ptmfd, ptsname, 0xff)) {
     WARN("Fail to get ptsname, errno=%d", errno);
     return errno;
   }
-  if (grantpt(ptmfd))
-  {
+  if (grantpt(ptmfd)) {
     WARN("Fail to grant access to the slave pt, errno=%d", errno);
     return errno;
   }
-  if (unlockpt(ptmfd))
-  {
+  if (unlockpt(ptmfd)) {
     WARN("Fail to unlock a pt, errno=%d", errno);
     return errno;
   }
   int ptsfd = open(ptsname, O_RDWR);
   tcsetattr(ptsfd, TCSANOW, &hdr.tmode);
-  if (dup2(ptsfd, STDIN_FILENO) == -1)
-  {
+  if (dup2(ptsfd, STDIN_FILENO) == -1) {
     WARN("Fail to dup2 pt for stdin, errno=%d", errno);
     return errno;
   }
-  if (dup2(ptsfd, STDOUT_FILENO) == -1)
-  {
+  if (dup2(ptsfd, STDOUT_FILENO) == -1) {
     WARN("Fail to dup2 pt for stdout, errno=%d", errno);
     return errno;
   }
-  if (dup2(ptsfd, STDERR_FILENO) == -1)
-  {
+  if (dup2(ptsfd, STDERR_FILENO) == -1) {
     WARN("Fail to dup2 pt for stderr, errno=%d", errno);
     return errno;
   }
@@ -464,41 +412,36 @@ create_ptms()
   return 0;
 }
 
-int
-parse_flag(int data_sockfd) {
+
+int parse_flag(int data_sockfd) {
   // Stop daemon on demand.
-  if (hdr.flag & RUNNS_STOP)
-  {
-    if (cred.uid == 0)
-    {
+  if (hdr.flag & RUNNS_STOP) {
+    if (cred.uid == 0) {
       INFO("closing");
       close(data_sockfd);
       stop_daemon(hdr.flag); // Should never returns
     }
-    else
-    {
+    else {
       WARN("Client with %d UID tried to kill the daemon ", cred.uid);
       return 1;
     }
   }
 
   // Transfer list of childs
-  if (hdr.flag & RUNNS_LIST)
-  { // TODO rets
+  if (hdr.flag & RUNNS_LIST) {
+    // TODO rets
     INFO("uid=%d ask for pid list", cred.uid);
     clean_pids();
     // Count the number of jobs for uid
     unsigned int jobs = 0;
-    for (int i = 0; i < childs_run; i++)
-    {
+    for (int i = 0; i < childs_run; i++) {
       if (childs[i].uid == cred.uid)
         ++jobs;
     }
 
     if (write(data_sockfd, (void *)&jobs, sizeof(jobs)) == -1)
       ERR("Can't send number of jobs to the client %d", cred.uid);
-    for (unsigned int i = 0; i < jobs; i++)
-    {
+    for (unsigned int i = 0; i < jobs; i++) {
       if (write(data_sockfd, (void *)&childs[i], sizeof(struct runns_child)) == -1)
         ERR("Can't send child info to the client %d", cred.uid);
     }

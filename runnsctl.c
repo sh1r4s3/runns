@@ -46,8 +46,7 @@ static int netns_size = 0;
 static struct netns *ns_head = NULL;
 static int sockfd = 0;
 
-struct option opts[] =
-{
+struct option opts[] = {
   { .name = "help", .has_arg = 0, .flag = 0, .val = 'h' },
   { .name = "program", .has_arg = 1, .flag = 0, .val = 'p' },
   { .name = "verbose", .has_arg = 0, .flag = 0, .val = 'v' },
@@ -62,22 +61,20 @@ struct option opts[] =
 
 extern char **environ;
 
-void
-help_me()
-{
+void help_me() {
   const char *hstr = \
 "client [options]  \n"                                                \
 "Options:  \n"                                                        \
-"-h|--help             help  \n"                                      \
-"-s|--stop             stop daemon (only root)  \n"                   \
-"-l|--list             list childs  \n"                               \
-"-p|--program <path>   program to run in desired netns  \n"           \
-"-t|--create-ptms      create control terminal  \n"                   \
+"-h|--help             help\n"                                        \
+"-s|--stop             stop daemon (only root)\n"                     \
+"-l|--list             list childs\n"                                 \
+"-p|--program <path>   program to run in desired netns\n"             \
+"-t|--create-ptms      create control terminal\n"                     \
 "-f|--forward-port     <ip>:<port>:<netns path>:<proto><ip family>\n" \
 "                      <ip family> could be 4 or 6\n"                 \
 "                      <netns path> path to the netns fd\n"           \
-"--set-netns <path>    network namespace to switch  \n"               \
-"--socket <path>       path to the runns socket  \n"                  \
+"--set-netns <path>    network namespace to switch\n"                 \
+"--socket <path>       path to the runns socket\n"                    \
 "-v|--verbose          be verbose\n";
 
   puts(hstr);
@@ -171,9 +168,7 @@ void cleanup() {
     close(sockfd);
 }
 
-int
-main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   struct runns_header hdr = {0};
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = DEFAULT_RUNNS_SOCKET};
   const char *prog = 0, *netns = 0, *args = 0;
@@ -182,13 +177,12 @@ main(int argc, char **argv)
   char verbose = 0;
   int ret = EXIT_SUCCESS;
 
+  // Parse command line options
   if (argc <= 1)
     ERR("For the help message try: runnsctl --help");
 
-  while ((opt = getopt_long(argc, argv, optstring, opts, 0)) != -1)
-  {
-    switch (opt)
-    {
+  while ((opt = getopt_long(argc, argv, optstring, opts, 0)) != -1) {
+    switch (opt) {
       case 'h':
         help_me();
         break;
@@ -273,14 +267,12 @@ main(int argc, char **argv)
 
   // Up socket
   sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (sockfd == -1)
-  {
+  if (sockfd == -1) {
     ERR("Something gone very wrong, socket = %d", sockfd);
     cleanup();
     return ret;
   }
-  if (connect(sockfd, (const struct sockaddr *)&addr, sizeof(addr)) == -1)
-  {
+  if (connect(sockfd, (const struct sockaddr *)&addr, sizeof(addr)) == -1) {
     ERR("Can't connect to runns daemon");
     cleanup();
     return ret;
@@ -299,14 +291,12 @@ main(int argc, char **argv)
     return ret;
   }
   // Print list of childs and exit
-  if (hdr.flag & RUNNS_LIST)
-  {
+  if (hdr.flag & RUNNS_LIST) {
     unsigned int childs_run;
     struct runns_child child;
     if (read(sockfd, (void *)&childs_run, sizeof(childs_run)) == -1)
       ERR("Can't read number of childs from the daemon");
-    for (int i = 0; i < childs_run; i++)
-    {
+    for (int i = 0; i < childs_run; i++) {
       if (read(sockfd, (void *)&child, sizeof(child)) == -1)
         ERR("Can't read child info from the daemon");
       printf("%d\n", child.pid);
@@ -316,31 +306,28 @@ main(int argc, char **argv)
   }
 
   if (write(sockfd, (void *)prog, hdr.prog_sz) == -1 ||
-      write(sockfd, (void *)netns, hdr.netns_sz) == -1)
-  {
+      write(sockfd, (void *)netns, hdr.netns_sz) == -1) {
+
     ERR("Can't send program name or network namespace name to the daemon");
   }
   // Transfer argv
-  if (hdr.args_sz > 0)
-  {
-    for (int i = optind; i < argc; i++)
-    {
+  if (hdr.args_sz > 0) {
+    for (int i = optind; i < argc; i++) {
       size_t sz = strlen(argv[i]) + 1; // strlen + \0
       if (write(sockfd, (void *)&sz, sizeof(size_t)) == -1 ||
-          write(sockfd, (void *)argv[i], sz) == -1)
-      {
+          write(sockfd, (void *)argv[i], sz) == -1) {
+
         ERR("Can't send argv to the daemon");
       }
     }
   }
 
   // Transfer environment variables
-  for (int i = 0; i < hdr.env_sz; i++)
-  {
+  for (int i = 0; i < hdr.env_sz; i++) {
     size_t sz = strlen(environ[i]) + 1; // strlen + \0
     if (write(sockfd, (void *)&sz, sizeof(size_t)) == -1 ||
-        write(sockfd, (void *)environ[i], sz) == -1)
-    {
+        write(sockfd, (void *)environ[i], sz) == -1) {
+
       ERR("Can't send envs to the daemon");
     }
   }
