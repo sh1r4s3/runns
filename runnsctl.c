@@ -123,8 +123,10 @@ static void add_netns(char *ip) {
         ERR("forward string is empty");
     }
     char *port = NULL, *netns_path = NULL;
+    size_t ip_len = strlen(ip);
     port = strchr(ip, ENV_SEPARATOR);
-    if (port) netns_path = strchr(port + 1, ENV_SEPARATOR);
+    if (port && (size_t)port < ((size_t)ip + ip_len))
+        netns_path = strchr(port + 1, ENV_SEPARATOR);
     if (!port || !netns_path) { // Mandatory fields
         WARN("%s can't parse %s", __func__, ip);
         return;
