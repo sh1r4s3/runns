@@ -12,8 +12,13 @@ $(HELPER_LIB): librunns.c
 	$(CC) -o $@ -shared -fPIC $<
 
 .PHONY: tests
-tests:
+tests: tests_build tests_run
+
+tests_build:
 	$(MAKE) -C tests/
+
+tests_run:
+	$(MAKE) -C tests/ run
 
 .PHONY: clean
 clean:
