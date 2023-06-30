@@ -1,0 +1,12 @@
+CC=@CC@
+LD=@CC@
+PREFIX=@prefix@
+
+CFLAGS=@CFLAGS@
+DAEMON=runns
+CLIENT=runnsctl
+LIBRUNNS_ENABLE=@LIBRUNNS@
+HELPER_LIB=$(if $(filter-out $(LIBRUNNS_ENABLE),no),librunns.so)
+HELPER=build-net clean-net
+_ := $() $()
+comma := ,

@@ -54,7 +54,7 @@ fi
 dnl Get source code path
 dnl AC_DEFINE_UNQUOTED([SRC_PATH], ["$srcdir"], [source path])
 
-dnl Configure Makefile from Makefile.in
-AC_CONFIG_FILES([Makefile])
+dnl Configure main configuration for makefiles
+AC_CONFIG_FILES([config.mk])
 
 AC_OUTPUT

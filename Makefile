@@ -1,15 +1,4 @@
-CC=@CC@
-LD=@CC@
-PREFIX=@prefix@
-
-CFLAGS=@CFLAGS@
-DAEMON=runns
-CLIENT=runnsctl
-LIBRUNNS_ENABLE=@LIBRUNNS@
-HELPER_LIB=$(if $(filter-out $(LIBRUNNS_ENABLE),no),librunns.so)
-HELPER=build-net clean-net
-_ := $() $()
-comma := ,
+include config.mk
 
 all: $(DAEMON) $(CLIENT) $(HELPER_LIB)
 
@@ -22,12 +11,14 @@ $(CLIENT): $(CLIENT).o
 $(HELPER_LIB): librunns.c
 	$(CC) -o $@ -shared -fPIC $<
 
-tests/%: tests/%.c queue.c
-	$(CC) -I. -Itau/ -o $@ $^
+.PHONY: tests
+tests:
+	$(MAKE) -C tests/
 
 .PHONY: clean
 clean:
 	rm -f $(DAEMON) $(CLIENT) $(HELPER_LIB) *.o
+	$(MAKE) -C tests/ clean
 
 .PHONY: install
 install: $(DAEMON) $(CLIENT) $(HELPER)
@@ -41,4 +32,4 @@ uninstall: $(CLIENT) $(DAEMON) $(HELPER)
 
 .PHONY: distclean
 distclean:
-	rm -vrf $(DAEMON) $(CLIENT) *.o Makefile autom4te.cache config.log config.status
+	rm -vrf $(DAEMON) $(CLIENT) *.o autom4te.cache config.log config.status
