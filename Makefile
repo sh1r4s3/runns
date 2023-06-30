@@ -37,4 +37,4 @@ uninstall: $(CLIENT) $(DAEMON) $(HELPER)
 
 .PHONY: distclean
 distclean:
-	rm -vrf $(DAEMON) $(CLIENT) *.o autom4te.cache config.log config.status
+	rm -vrf $(DAEMON) $(CLIENT) *.o autom4te.cache config.log config.status config.mk configure
