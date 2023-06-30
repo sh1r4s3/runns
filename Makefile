@@ -38,3 +38,20 @@ uninstall: $(CLIENT) $(DAEMON) $(HELPER)
 .PHONY: distclean
 distclean:
 	rm -vrf $(DAEMON) $(CLIENT) *.o autom4te.cache config.log config.status config.mk configure
+
+define HELP_MESSAGE
+The following rules are available:
+
+  all (default) -- build the daemon, client and the helper libs
+  tests -- build and run the unit tests
+  tests_build -- just build the unit tests
+  tests_run -- just run the unit tests
+  clean -- remove object files, the built binaries including unit tests
+  install -- install the daemon and client to the system
+  uninstall -- revert install
+  distclean -- remove all built binaries and configuration
+endef
+
+.PHONY: help
+help:
+	@ $(info $(HELP_MESSAGE))
