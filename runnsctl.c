@@ -42,9 +42,9 @@ void cleanup();
 
 enum wide_opts {OPT_SET_NETNS = 0xFF01, OPT_SOCKET = 0xFF02};
 
-static int netns_size = 0;
-static struct netns *ns_head = NULL;
-static int sockfd = 0;
+int netns_size = 0;
+struct netns *ns_head = NULL;
+int sockfd = 0;
 
 struct option opts[] = {
   { .name = "help", .has_arg = 0, .flag = 0, .val = 'h' },
@@ -81,8 +81,7 @@ void help_me() {
   exit(EXIT_SUCCESS);
 }
 
-// TODO: check whether we need static here or it is redundant?
-static inline void parse_l4_proto(char *l4_proto_str, L4_PROTOCOLS *l4_proto, sa_family_t *family) {
+void parse_l4_proto(char *l4_proto_str, L4_PROTOCOLS *l4_proto, sa_family_t *family) {
     // Basic checks and calc the size of the str
     if (!l4_proto_str || !l4_proto || !family) {
         ERR("NULL slipped in 0x%x 0x%x 0x%x", l4_proto_str, l4_proto, family);
@@ -118,7 +117,7 @@ static inline void parse_l4_proto(char *l4_proto_str, L4_PROTOCOLS *l4_proto, sa
     DEBUG("l4_proto_str=%s l4_proto=%d family=%d", l4_proto_str, l4_proto, family);
 }
 
-static void add_netns(char *ip) {
+void add_netns(char *ip) {
     if (!ip) {
         ERR("forward string is empty");
     }
@@ -170,6 +169,8 @@ void cleanup() {
     close(sockfd);
 }
 
+// Don't define main() for unit tests
+#ifndef TAU_TEST
 int main(int argc, char **argv) {
   struct runns_header hdr = {0};
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = DEFAULT_RUNNS_SOCKET};
@@ -340,3 +341,4 @@ int main(int argc, char **argv) {
   cleanup();
   return ret;
 }
+#endif
