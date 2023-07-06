@@ -259,8 +259,8 @@ int main(int argc, char **argv) {
         if (str)
             printf("Command to runns daemon: %s\n", str);
     } else {
-        printf("network namespace to switch is: %s\n" \
-               "program to run: %s\n", \
+        printf("network namespace to switch is: %s\n"
+               "program to run: %s\n",
                netns, prog);
     }
   }
