@@ -15,7 +15,7 @@ $(HELPER_LIB): librunns.c
 tests: tests_build tests_run
 
 tests_build:
-	$(MAKE) -C tests/
+	$(MAKE) -C tests/ build
 
 tests_run:
 	$(MAKE) -C tests/ run
