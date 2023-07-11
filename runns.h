@@ -73,13 +73,16 @@ typedef enum {
 } L4_PROTOCOLS;
 
 struct netns {
-    unsigned char ip[sizeof(struct in6_addr)];
-    char *netns;
-    int fd;
-    sa_family_t family; // AF_INET or AF_INET6
-    L4_PROTOCOLS proto; // TCP, UDP, cosmoshroom radiation
-    in_port_t port;
-    struct netns *pnext;
+  unsigned char ip[sizeof(struct in6_addr)];
+  int fd;             // File descriptor to clone a netns from
+  sa_family_t family; // AF_INET or AF_INET6
+  L4_PROTOCOLS proto; // TCP, UDP, cosmoshroom radiation
+  in_port_t port;
+};
+
+struct netns_list {
+  struct netns node;
+  struct netns_list *pnext;
 };
 
 #endif
