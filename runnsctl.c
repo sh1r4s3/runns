@@ -138,11 +138,17 @@ void add_netns(char *ip) {
     sa_family_t family = AF_UNSPEC;
     parse_l4_proto(l4_proto_str, &l4_proto, &family);
 
+    // Open a netns file to get a fd
+    int netns_fd = open(netns_path, 0);
+    if (netns_fd < 0) {
+        ERR("Can't open netns %s errno: %s", netns_path, strerror(errno));
+    }
+
     // Create a new netns
     struct netns *ns = (struct netns *)malloc(sizeof(struct netns));
     inet_pton(family, ip, ns->ip);
     ns->port = atoi(port);
-    ns->netns = strndup(netns_path, PATH_MAX);
+    ns->fd = netns_fd;
     ns->family = family;
     ns->proto = l4_proto;
     ns->pnext = NULL;
