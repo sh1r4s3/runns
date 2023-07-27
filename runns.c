@@ -241,7 +241,7 @@ int drop_priv(uid_t _uid) {
     }
   }
   else
-    ERR("Couldn't find user '%.32s'", pw->pw_name);
+    ERR("Couldn't find a user with UID=%d", _uid);
 }
 
 
