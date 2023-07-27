@@ -76,7 +76,7 @@ struct netns {
   unsigned char ip[sizeof(struct in6_addr)];
   int fd;             // File descriptor to clone a netns from
   sa_family_t family; // AF_INET or AF_INET6
-  L4_PROTOCOLS proto; // TCP, UDP, cosmoshroom radiation
+  L4_PROTOCOLS proto; // TCP, UDP or unknown
   in_port_t port;
 };
 
