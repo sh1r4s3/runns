@@ -52,13 +52,14 @@ char runns_socket_dir[PATH_MAX] = {0};
 enum is_default_dir {default_dir, not_default_dir} defdir = default_dir;
 struct ucred cred;
 
-int drop_priv(uid_t _uid, struct passwd **pw);
+int drop_priv(uid_t _uid);
 void stop_daemon(int flag);
 int clean_pids();
 void free_tvars();
 int create_ptms();
 int clean_socket();
 int parse_flag(int data_sockfd);
+void do_netns(int data_sockfd);
 
 
 struct option opts[] =
@@ -116,7 +117,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  struct passwd *pw = NULL;
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = {0}};
   memcpy(addr.sun_path, runns_socket, strlen(runns_socket) + 1);
   char *last_slash = strrchr(runns_socket, '/');
@@ -198,141 +198,50 @@ int main(int argc, char **argv) {
 
     // Read the operational mode
     INFO("op mode = %d", hdr.op_mode);
-    if (hdr.op_mode & OP_MODE_UNK) {
-      WARN("Skipping. Unknown op mode");
-      continue;
+    switch (hdr.op_mode) {
+      case OP_MODE_FWD_PORT:
+        // TODO: Handle OP_MODE_FWD_PORT
+        INFO("Nothing can be done for OP_MODE_FWD_PORT yet. Skip");
+        break;
+      case OP_MODE_NETNS:
+        do_netns(data_sockfd);
+        break;
+      default:
+        WARN("Skipping. Unknown op mode");
     }
 
-    if (hdr.op_mode & OP_MODE_FWD_PORT) {
-      // TODO: Handle OP_MODE_FWD_PORT
-      INFO("Nothing can be done for OP_MODE_FWD_PORT yet. Skip");
-      continue;
-    }
-
-    // Read program name and network namespace name
-    program = (char *)malloc(hdr.prog_sz);
-    netns = (char *)malloc(hdr.netns_sz);
-    if (!program || !netns)
-      ERR("Can't allocate memory (program=%p, netns=%p", program, netns);
-    ret = read(data_sockfd, (void *)program, hdr.prog_sz);
-    ret = read(data_sockfd, (void *)netns, hdr.netns_sz);
-    INFO("uid=%d program=%s netns=%s", cred.uid, program, netns);
-
-    // Read argv for the program
-    if (hdr.args_sz) {
-      hdr.args_sz += 2; // program name + null at the end
-      args = (char **)malloc(hdr.args_sz*sizeof(char *));
-      if (!args)
-        ERR("Can't allocate memory (args = %p)", args);
-      args[0] = program;
-      args[hdr.args_sz - 1] = 0;
-      for (int i = 1; i < hdr.args_sz - 1; i++) {
-        size_t sz;
-        ret = read(data_sockfd, (void *)&sz, sizeof(size_t));
-        args[i] = (char *)malloc(sz);
-        ret = read(data_sockfd, (void *)args[i], sz);
-      }
-    }
-    else
-      args = 0;
-
-    // Read environment variables
-    if (hdr.env_sz) {
-      envs = (char **)malloc(++hdr.env_sz*sizeof(char *));
-      for (int i = 0; i < hdr.env_sz - 1; i++) {
-        size_t env_sz;
-        ret = read(data_sockfd, (void *)&env_sz, sizeof(size_t));
-        envs[i] = (char *)malloc(env_sz);
-        ret = read(data_sockfd, (void *)envs[i], env_sz);
-      }
-      envs[hdr.env_sz - 1] = 0;
-    }
-    else
-      envs = 0;
-
-    close(data_sockfd);
-
-    clean_pids();
-    if (childs_run < MAX_CHILDS) {
-      // Make fork
-      pid_t child = fork();
-      if (child == -1)
-        ERR("Fail on fork");
-
-      // Child
-      if (child == 0) {
-        child = fork();
-        if (child != 0) {
-          *glob_pid = child;
-          exit(0);
-        }
-
-        // Un-map shared memory from the parent.
-        munmap(glob_pid, sizeof(glob_pid));
-
-        // Detach child from parent
-        setsid();
-
-        // Redirect stdin, stdout, stderr to new PTS
-        if (hdr.flag & RUNNS_NPTMS) {
-          int err;
-          if (err = create_ptms()) {
-            exit(err);
-          }
-        }
-
-        int netfd = open(netns, 0);
-        setns(netfd, CLONE_NEWNET);
-        drop_priv(cred.uid, &pw);
-        if (execve(program, (char * const *)args, (char * const *)envs) == -1) {
-          WARN("Can not run %s, execve failed with errno=%d", program, errno);
-          return EXIT_FAILURE;
-        }
-      }
-      else
-        waitpid(child, 0, 0);
-
-      // Save child.
-      INFO("Forked %d", *glob_pid);
-      childs[childs_run].uid = cred.uid;
-      childs[childs_run].pid = *glob_pid;
-      ++childs_run;
-      free_tvars();
-    }
-    else
-      INFO("Maximum number of childs has been reached.");
   }
 
   return 0;
 }
 
-int drop_priv(uid_t _uid, struct passwd **pw) {
-  *pw = getpwuid(_uid);
-  if (*pw) {
-    uid_t uid = (*pw)->pw_uid;
-    gid_t gid = (*pw)->pw_gid;
+int drop_priv(uid_t _uid) {
+  struct passwd *pw = getpwuid(_uid);
+  if (pw) {
+    uid_t uid = pw->pw_uid;
+    gid_t gid = pw->pw_gid;
 
-    if (initgroups((*pw)->pw_name, gid) != 0)
+    if (initgroups(pw->pw_name, gid) != 0)
       ERR("Couldn't initialize the supplementary group list");
     endpwent();
 
     if (setgid(gid) != 0 || setuid(uid) != 0) {
       ERR("Couldn't change to '%.32s' uid=%lu gid=%lu",
-          (*pw)->pw_name,
+          pw->pw_name,
           (unsigned long)uid,
           (unsigned long)gid);
     }
 
-    if (chdir((*pw)->pw_dir)) {
+    if (chdir(pw->pw_dir)) {
       ERR("Couldn't chdir to %s for '%.32s' uid=%lu gid=%lu",
-          (*pw)->pw_dir,
-          (*pw)->pw_name,
+          pw->pw_dir,
+          pw->pw_name,
           (unsigned long)uid,
           (unsigned long)gid);
     }
   }
   else
-    ERR("Couldn't find user '%.32s'", (*pw)->pw_name);
+    ERR("Couldn't find user '%.32s'", pw->pw_name);
 }
 
 
@@ -450,4 +359,102 @@ int parse_flag(int data_sockfd) {
   }
 
   return 0;
+}
+
+
+void do_netns(int data_sockfd) {
+  int ret;
+
+  // Read program name and network namespace name
+  program = (char *)malloc(hdr.prog_sz);
+  netns = (char *)malloc(hdr.netns_sz);
+  if (!program || !netns)
+    ERR("Can't allocate memory (program=%p, netns=%p", program, netns);
+  ret = read(data_sockfd, (void *)program, hdr.prog_sz);
+  ret = read(data_sockfd, (void *)netns, hdr.netns_sz);
+  INFO("uid=%d program=%s netns=%s", cred.uid, program, netns);
+
+  // Read argv for the program
+  if (hdr.args_sz) {
+    hdr.args_sz += 2; // program name + null at the end
+    args = (char **)malloc(hdr.args_sz*sizeof(char *));
+    if (!args)
+      ERR("Can't allocate memory (args = %p)", args);
+    args[0] = program;
+    args[hdr.args_sz - 1] = 0;
+    for (int i = 1; i < hdr.args_sz - 1; i++) {
+      size_t sz;
+      ret = read(data_sockfd, (void *)&sz, sizeof(size_t));
+      args[i] = (char *)malloc(sz);
+      ret = read(data_sockfd, (void *)args[i], sz);
+    }
+  }
+  else
+    args = 0;
+
+  // Read environment variables
+  if (hdr.env_sz) {
+    envs = (char **)malloc(++hdr.env_sz*sizeof(char *));
+    for (int i = 0; i < hdr.env_sz - 1; i++) {
+      size_t env_sz;
+      ret = read(data_sockfd, (void *)&env_sz, sizeof(size_t));
+      envs[i] = (char *)malloc(env_sz);
+      ret = read(data_sockfd, (void *)envs[i], env_sz);
+    }
+    envs[hdr.env_sz - 1] = 0;
+  }
+  else
+    envs = 0;
+
+  close(data_sockfd);
+
+  clean_pids();
+  if (childs_run < MAX_CHILDS) {
+    // Make fork
+    pid_t child = fork();
+    if (child == -1)
+      ERR("Fail on fork");
+
+    // Child
+    if (child == 0) {
+      child = fork();
+      if (child != 0) {
+        *glob_pid = child;
+        exit(0);
+      }
+
+      // Un-map shared memory from the parent.
+      munmap(glob_pid, sizeof(glob_pid));
+
+      // Detach child from parent
+      setsid();
+
+      // Redirect stdin, stdout, stderr to new PTS
+      if (hdr.flag & RUNNS_NPTMS) {
+        int err;
+        if (err = create_ptms()) {
+          exit(err);
+        }
+      }
+
+      int netfd = open(netns, 0);
+      setns(netfd, CLONE_NEWNET);
+      drop_priv(cred.uid);
+      if (execve(program, (char * const *)args, (char * const *)envs) == -1) {
+        WARN("Can not run %s, execve failed with errno=%d", program, errno);
+        return EXIT_FAILURE;
+      }
+    }
+    else
+      waitpid(child, 0, 0);
+
+    // Save child.
+    INFO("Forked %d", *glob_pid);
+    childs[childs_run].uid = cred.uid;
+    childs[childs_run].pid = *glob_pid;
+    ++childs_run;
+    free_tvars();
+  }
+  else
+    INFO("Maximum number of childs has been reached.");
 }
