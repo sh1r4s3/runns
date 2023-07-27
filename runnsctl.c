@@ -43,7 +43,7 @@ void cleanup();
 enum wide_opts {OPT_SET_NETNS = 0xFF01, OPT_SOCKET = 0xFF02};
 
 int netns_size = 0;
-struct netns *ns_head = NULL;
+struct netns_list *ns_head = NULL;
 int sockfd = 0;
 
 struct option opts[] = {
@@ -145,18 +145,18 @@ void add_netns(char *ip) {
     }
 
     // Create a new netns
-    struct netns *ns = (struct netns *)malloc(sizeof(struct netns));
-    inet_pton(family, ip, ns->ip);
-    ns->port = atoi(port);
-    ns->fd = netns_fd;
-    ns->family = family;
-    ns->proto = l4_proto;
+    struct netns_list *ns = (struct netns_list *)malloc(sizeof(struct netns_list));
+    inet_pton(family, ip, ns->node.ip);
+    ns->node.port = atoi(port);
+    ns->node.fd = netns_fd;
+    ns->node.family = family;
+    ns->node.proto = l4_proto;
     ns->pnext = NULL;
-    DEBUG("adding port=%d ip=%s(0x%x), netns=%s, proto=%d", ns->port, ip, *((int *)ns->ip), ns->netns, ns->proto);
+    DEBUG("adding port=%d ip=%s(0x%x), netns=%s, proto=%d", ns->node.port, ip, *((int *)ns->node.ip), ns->node.netns, ns->node.proto);
     ++netns_size;
     // Insert into the list of netns
     if (ns_head) {
-      struct netns *p;
+      struct netns_list *p;
       for (p = ns_head; p != NULL; p = p->pnext);
       p->pnext = ns;
     } else {
@@ -165,8 +165,8 @@ void add_netns(char *ip) {
 }
 
 void cleanup() {
-  for (struct netns *p = ns_head; p != NULL;) {
-    struct netns *ptmp = p->pnext;
+  for (struct netns_list *p = ns_head; p != NULL;) {
+    struct netns_list *ptmp = p->pnext;
     free(p);
     p = ptmp;
   }
@@ -314,6 +314,10 @@ int main(int argc, char **argv) {
     return ret;
   }
 
+  // TODO: either transer prog + netns or a list of netns
+  // this should depend on the current operation mode
+  // OP_MODE_FWD_PORT -- forward ports (a list of netns)
+  // OP_MODE_NETNS -- the "classic" mode to run prog in netns
   if (write(sockfd, (void *)prog, hdr.prog_sz) == -1 ||
       write(sockfd, (void *)netns, hdr.netns_sz) == -1) {
 
