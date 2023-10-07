@@ -45,6 +45,8 @@ enum wide_opts {OPT_SET_NETNS = 0xFF01, OPT_SOCKET = 0xFF02};
 int netns_size = 0;
 struct netns_list *ns_head = NULL;
 int sockfd = 0;
+struct runns_header hdr = {0};
+const char *prog = 0, *netns = 0;
 
 struct option opts[] = {
   { .name = "help", .has_arg = 0, .flag = 0, .val = 'h' },
@@ -178,9 +180,7 @@ void cleanup() {
 // Don't define main() for unit tests
 #ifndef TAU_TEST
 int main(int argc, char **argv) {
-  struct runns_header hdr = {0};
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = DEFAULT_RUNNS_SOCKET};
-  const char *prog = 0, *netns = 0;
   const char *optstring = "hp:vsltf:";
   int opt, len;
   char verbose = 0;
