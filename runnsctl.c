@@ -180,7 +180,7 @@ void cleanup() {
 int main(int argc, char **argv) {
   struct runns_header hdr = {0};
   struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = DEFAULT_RUNNS_SOCKET};
-  const char *prog = 0, *netns = 0, *args = 0;
+  const char *prog = 0, *netns = 0;
   const char *optstring = "hp:vsltf:";
   int opt, len;
   char verbose = 0;
