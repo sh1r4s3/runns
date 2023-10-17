@@ -177,6 +177,42 @@ void cleanup() {
     close(sockfd);
 }
 
+void send_netns(int argc, char **argv) {
+  // TODO: either transer prog + netns or a list of netns
+  // this should depend on the current operation mode
+  // OP_MODE_FWD_PORT -- forward ports (a list of netns)
+  // OP_MODE_NETNS -- the "classic" mode to run prog in netns
+  if (write(sockfd, (void *)prog, hdr.prog_sz) == -1 ||
+      write(sockfd, (void *)netns, hdr.netns_sz) == -1) {
+
+    ERR("Can't send program name or network namespace name to the daemon");
+  }
+  // Transfer argv
+  if (hdr.args_sz > 0) {
+    for (int i = optind; i < argc; i++) {
+      size_t sz = strlen(argv[i]) + 1; // strlen + \0
+      if (write(sockfd, (void *)&sz, sizeof(size_t)) == -1 ||
+          write(sockfd, (void *)argv[i], sz) == -1) {
+
+        ERR("Can't send argv to the daemon");
+      }
+    }
+  }
+
+  // Transfer environment variables
+  for (int i = 0; i < hdr.env_sz; i++) {
+    size_t sz = strlen(environ[i]) + 1; // strlen + \0
+    if (write(sockfd, (void *)&sz, sizeof(size_t)) == -1 ||
+        write(sockfd, (void *)environ[i], sz) == -1) {
+
+      ERR("Can't send envs to the daemon");
+    }
+  }
+  int eof = 0;
+  if (write(sockfd, &eof, sizeof(int)) == -1)
+    ERR("Can't send EOF to the daemon");
+}
+
 // Don't define main() for unit tests
 #ifndef TAU_TEST
 int main(int argc, char **argv) {
@@ -314,39 +350,13 @@ int main(int argc, char **argv) {
     return ret;
   }
 
-  // TODO: either transer prog + netns or a list of netns
-  // this should depend on the current operation mode
-  // OP_MODE_FWD_PORT -- forward ports (a list of netns)
-  // OP_MODE_NETNS -- the "classic" mode to run prog in netns
-  if (write(sockfd, (void *)prog, hdr.prog_sz) == -1 ||
-      write(sockfd, (void *)netns, hdr.netns_sz) == -1) {
-
-    ERR("Can't send program name or network namespace name to the daemon");
+  switch (hdr.op_mode) {
+    case OP_MODE_NETNS:
+      send_netns(argc, argv);
+      break;
+    default:
+      ERR("Unknown OP_MODE: %d", hdr.op_mode);
   }
-  // Transfer argv
-  if (hdr.args_sz > 0) {
-    for (int i = optind; i < argc; i++) {
-      size_t sz = strlen(argv[i]) + 1; // strlen + \0
-      if (write(sockfd, (void *)&sz, sizeof(size_t)) == -1 ||
-          write(sockfd, (void *)argv[i], sz) == -1) {
-
-        ERR("Can't send argv to the daemon");
-      }
-    }
-  }
-
-  // Transfer environment variables
-  for (int i = 0; i < hdr.env_sz; i++) {
-    size_t sz = strlen(environ[i]) + 1; // strlen + \0
-    if (write(sockfd, (void *)&sz, sizeof(size_t)) == -1 ||
-        write(sockfd, (void *)environ[i], sz) == -1) {
-
-      ERR("Can't send envs to the daemon");
-    }
-  }
-  int eof = 0;
-  if (write(sockfd, &eof, sizeof(int)) == -1)
-    ERR("Can't send EOF to the daemon");
 
   cleanup();
   return ret;

@@ -14,6 +14,9 @@ $(HELPER_LIB): librunns.c
 .PHONY: tests
 tests: tests_build tests_run
 
+container_tests:
+	$(shell ./make_container.sh)
+
 tests_build:
 	$(MAKE) -C tests/ build
 
