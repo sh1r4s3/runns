@@ -335,7 +335,7 @@ int main(int argc, char **argv) {
     cleanup();
     return ret;
   }
-  // Print list of childs and exit
+  // Print list of children and exit
   if (hdr.flag & RUNNS_LIST) {
     unsigned int childs_run;
     struct runns_child child;
