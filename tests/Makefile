@@ -10,8 +10,8 @@ run: build
 
 build: test_queue test_runnsctl
 
-test_%: ../%.c test_%.c
-	$(CC) -DTAU_TEST -I.. -I../tau/ -o $@ $^
+test_%: ../%.c %.c
+	$(CC) -DTAU_TEST -I.. -I../tau/ -o test_$@ $^
 
 .PHONY: clean
 clean:

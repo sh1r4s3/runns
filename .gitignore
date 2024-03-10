@@ -3,3 +3,10 @@ runns
 runnsctl
 client
 *.o
+*.so
+configure
+tests/test_*
+tags
+chroot/
+autom4te.cache/
+config.*
