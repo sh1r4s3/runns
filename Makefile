@@ -12,10 +12,13 @@ $(HELPER_LIB): librunns.c
 	$(CC) -o $@ -shared -fPIC $<
 
 .PHONY: tests
-tests: tests_build tests_run
+tests: container
 
-container_tests:
-	$(shell ./make_container.sh)
+container:
+	@ git submodule status | grep -q -v '^-' || { echo 'tau submodule is not initialized'; exit 1; }
+	@ git ls-tree -r --name-only @ | cpio -o -H newc > runns.cpio
+	@ git --git-dir tau/.git ls-tree -r --name-only @ | sed -n 's;.*;tau/&;p' | cpio -o -A -H newc -F runns.cpio
+	@ docker build -t runns_test --build-arg SRC=runns.cpio .
 
 tests_build:
 	$(MAKE) -C tests/ build
@@ -46,7 +49,7 @@ define HELP_MESSAGE
 The following rules are available:
 
   all (default) -- build the daemon, client and the helper libs
-  tests -- build and run the unit tests
+  tests -- build and run the unit tests in container
   tests_build -- just build the unit tests
   tests_run -- just run the unit tests
   clean -- remove object files, the built binaries including unit tests
