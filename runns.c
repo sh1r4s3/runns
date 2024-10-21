@@ -18,7 +18,6 @@
 #include <sched.h>
 
 #include <libgen.h>
-#define _XOPEN_SOURCE
 #include <limits.h>
 
 // Emit log message
@@ -59,7 +58,7 @@ void free_tvars();
 int create_ptms();
 int clean_socket();
 int parse_flag(int data_sockfd);
-void do_netns(int data_sockfd);
+int do_netns(int data_sockfd);
 
 
 struct option opts[] =
@@ -362,7 +361,7 @@ int parse_flag(int data_sockfd) {
 }
 
 
-void do_netns(int data_sockfd) {
+int do_netns(int data_sockfd) {
   int ret;
 
   // Read program name and network namespace name

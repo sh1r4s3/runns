@@ -9,6 +9,8 @@
 #define RUNNS_H
 
 #define __USE_GNU
+#define _XOPEN_SOURCE
+#define __USE_XOPEN_EXTENDED
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>

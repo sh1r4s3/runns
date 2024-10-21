@@ -8,6 +8,7 @@
 #include "runns.h"
 #include <arpa/inet.h>
 #include <limits.h>
+#include <strings.h>
 
 #define CLIENT_NAME "runnsctl"
 
