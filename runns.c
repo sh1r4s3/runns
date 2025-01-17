@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <sys/mount.h>
 #include <pwd.h>
 #include <grp.h>
 #include <syslog.h>
@@ -43,6 +44,7 @@ struct runns_child childs[MAX_CHILDS] = {0};
 unsigned int childs_run = 0;
 char *program = 0;
 char *netns = 0;
+char *resolv = 0;
 char **args = 0;
 char **envs = 0;
 int *glob_pid = 0;
@@ -277,6 +279,10 @@ int clean_pids() {
 void free_tvars() {
   free(program);
   free(netns);
+  if (resolv) {
+    free(resolv);
+    resolv = 0;
+  }
   if (args)
     for (size_t i = 1; i < hdr.args_sz - 3; free(args[i++]));
   if (envs)
@@ -369,9 +375,18 @@ int do_netns(int data_sockfd) {
   netns = (char *)malloc(hdr.netns_sz);
   if (!program || !netns)
     ERR("Can't allocate memory (program=%p, netns=%p", program, netns);
+  if (hdr.resolv_sz) {
+    resolv = (char *)malloc(hdr.resolv_sz);
+    if (!resolv) {
+      ERR("Can't allocate memory for resolv.conf path");
+    }
+  }
   ret = read(data_sockfd, (void *)program, hdr.prog_sz);
   ret = read(data_sockfd, (void *)netns, hdr.netns_sz);
-  INFO("uid=%d program=%s netns=%s", cred.uid, program, netns);
+  if (hdr.resolv_sz) {
+    ret = read(data_sockfd, (void *)resolv, hdr.resolv_sz);
+  }
+  INFO("uid=%d program=%s netns=%s resolv=%s", cred.uid, program, netns, hdr.resolv_sz ? resolv : "inherited");
 
   // Read argv for the program
   if (hdr.args_sz) {
@@ -436,8 +451,24 @@ int do_netns(int data_sockfd) {
         }
       }
 
+      // Set netns
       int netfd = open(netns, 0);
       setns(netfd, CLONE_NEWNET);
+
+      // Unshare mount namespace
+      if (resolv) {
+        if (unshare(CLONE_NEWNS) < 0) {
+          WARN("Can't unshare mount namespace, errno=%d", errno);
+          return EXIT_FAILURE;
+        }
+
+        if (mount(resolv, "/etc/resolv.conf", NULL, MS_BIND, NULL) < 0) {
+          WARN("Can't mount %s to /etc/resolv.conf, errno=%d", resolv, errno);
+          return EXIT_FAILURE;
+        }
+      }
+
+      // Drop privileges and execute command
       drop_priv(cred.uid);
       if (execve(program, (char * const *)args, (char * const *)envs) == -1) {
         WARN("Can not run %s, execve failed with errno=%d", program, errno);

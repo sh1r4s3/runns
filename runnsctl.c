@@ -41,13 +41,17 @@ void cleanup();
 #  define DEBUG(...)
 #endif
 
-enum wide_opts {OPT_SET_NETNS = 0xFF01, OPT_SOCKET = 0xFF02};
+enum wide_opts {
+  OPT_SET_NETNS = 0xFF01,
+  OPT_RESOLV = 0xFF02,
+  OPT_SOCKET = 0xFFAA
+};
 
 int netns_size = 0;
 struct netns_list *ns_head = NULL;
 int sockfd = 0;
 struct runns_header hdr = {0};
-const char *prog = 0, *netns = 0;
+const char *prog = 0, *netns = 0, *resolv = 0;
 
 struct option opts[] = {
   { .name = "help", .has_arg = 0, .flag = 0, .val = 'h' },
@@ -58,6 +62,7 @@ struct option opts[] = {
   { .name = "create-ptms", .has_arg = 0, .flag = 0, .val = 't' },
   { .name = "forward-port", .has_arg = 1, .flag = 0, .val = 'f' },
   { .name = "set-netns", .has_arg = 1, .flag = 0, .val = OPT_SET_NETNS },
+  { .name = "resolv", .has_arg = 1, .flag = 0, .val = OPT_RESOLV },
   { .name = "socket", .has_arg = 1, .flag = 0, .val = OPT_SOCKET },
   { 0, 0, 0, 0 }
 };
@@ -77,6 +82,7 @@ void help_me() {
 "                      <ip family> could be 4 or 6\n"                 \
 "                      <netns path> path to the netns fd\n"           \
 "--set-netns <path>    network namespace to switch\n"                 \
+"--resolv <path>       path to resolv.conf to be used in program"     \
 "--socket <path>       path to the runns socket\n"                    \
 "-v|--verbose          be verbose\n";
 
@@ -188,6 +194,13 @@ void send_netns(int argc, char **argv) {
 
     ERR("Can't send program name or network namespace name to the daemon");
   }
+
+  if (resolv) {
+    if (write(sockfd, (void *)resolv, hdr.resolv_sz) == -1) {
+      ERR("Can't send path to resolv.conf");
+    }
+  }
+
   // Transfer argv
   if (hdr.args_sz > 0) {
     for (int i = optind; i < argc; i++) {
@@ -262,6 +275,10 @@ int main(int argc, char **argv) {
         hdr.op_mode = OP_MODE_NETNS;
         netns = optarg;
         hdr.netns_sz = strlen(netns) + 1;
+        break;
+      case OPT_RESOLV:
+        resolv = optarg;
+        hdr.resolv_sz = strlen(resolv) + 1;
         break;
       case OPT_SOCKET:
         len = strlen(optarg);
