@@ -459,12 +459,12 @@ int do_netns(int data_sockfd) {
       if (resolv) {
         if (unshare(CLONE_NEWNS) < 0) {
           WARN("Can't unshare mount namespace, errno=%d", errno);
-          return EXIT_FAILURE;
+          exit(EXIT_FAILURE);
         }
 
         if (mount(resolv, "/etc/resolv.conf", NULL, MS_BIND, NULL) < 0) {
           WARN("Can't mount %s to /etc/resolv.conf, errno=%d", resolv, errno);
-          return EXIT_FAILURE;
+          exit(EXIT_FAILURE);
         }
       }
 
@@ -472,7 +472,7 @@ int do_netns(int data_sockfd) {
       drop_priv(cred.uid);
       if (execve(program, (char * const *)args, (char * const *)envs) == -1) {
         WARN("Can not run %s, execve failed with errno=%d", program, errno);
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
       }
     }
     else
