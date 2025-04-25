@@ -1,7 +1,7 @@
 /*
  * vim:et:sw=2:
  *
- * Copyright (c) 2023-2025 Nikita (sh1r4s3) Ermakov <sh1r4s3@mail.si-head.nl>
+ * Copyright (c) 2023-2025 Nikita Ermakov <sh1r4s3@pm.me>
  * SPDX-License-Identifier: MIT
  */
 #include <errno.h>
