@@ -12,11 +12,10 @@
 
 #define CLIENT_NAME "runnsctl"
 
-void cleanup();
-
 /*
  * Macros for logging
  */
+void cleanup();
 #define ERR(format, ...) \
     do { \
         fprintf(stderr, CLIENT_NAME ":%d / errno=%d / " format "\n", __LINE__, errno, ##__VA_ARGS__); \
@@ -41,36 +40,29 @@ void cleanup();
 #  define DEBUG(...)
 #endif
 
+/*
+ * Type definitions
+ */
 enum wide_opts {
   OPT_SET_NETNS = 0xFF01,
   OPT_RESOLV = 0xFF02,
   OPT_SOCKET = 0xFFAA
 };
 
+/*
+ * Global variables
+ */
 int netns_size = 0;
-struct netns_list *ns_head = NULL;
 int sockfd = 0;
+struct netns_list *ns_head = NULL;
 struct runns_header hdr = {0};
 const char *prog = 0, *netns = 0, *resolv = 0;
-
-struct option opts[] = {
-  { .name = "help", .has_arg = 0, .flag = 0, .val = 'h' },
-  { .name = "program", .has_arg = 1, .flag = 0, .val = 'p' },
-  { .name = "verbose", .has_arg = 0, .flag = 0, .val = 'v' },
-  { .name = "stop", .has_arg = 0, .flag = 0, .val = 's' },
-  { .name = "list", .has_arg = 0, .flag = 0, .val = 'l' },
-  { .name = "create-ptms", .has_arg = 0, .flag = 0, .val = 't' },
-  { .name = "forward-port", .has_arg = 1, .flag = 0, .val = 'f' },
-  { .name = "set-netns", .has_arg = 1, .flag = 0, .val = OPT_SET_NETNS },
-  { .name = "resolv", .has_arg = 1, .flag = 0, .val = OPT_RESOLV },
-  { .name = "socket", .has_arg = 1, .flag = 0, .val = OPT_SOCKET },
-  { 0, 0, 0, 0 }
-};
-
+struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = DEFAULT_RUNNS_SOCKET};
+char verbose = 0;
 extern char **environ;
 
 void help_me() {
-  const char *hstr = \
+  const char *hstr =                                                  \
 "client [options]  \n"                                                \
 "Options:  \n"                                                        \
 "-h|--help             help\n"                                        \
@@ -227,15 +219,22 @@ void send_netns(int argc, char **argv) {
     ERR("Can't send EOF to the daemon");
 }
 
-// Don't define main() for unit tests
-#ifndef TAU_TEST
-int main(int argc, char **argv) {
-  struct sockaddr_un addr = {.sun_family = AF_UNIX, .sun_path = DEFAULT_RUNNS_SOCKET};
+void parse_cmdline(int argc, char **argv) {
+  struct option opts[] = {
+    { .name = "help", .has_arg = 0, .flag = 0, .val = 'h' },
+    { .name = "program", .has_arg = 1, .flag = 0, .val = 'p' },
+    { .name = "verbose", .has_arg = 0, .flag = 0, .val = 'v' },
+    { .name = "stop", .has_arg = 0, .flag = 0, .val = 's' },
+    { .name = "list", .has_arg = 0, .flag = 0, .val = 'l' },
+    { .name = "create-ptms", .has_arg = 0, .flag = 0, .val = 't' },
+    { .name = "forward-port", .has_arg = 1, .flag = 0, .val = 'f' },
+    { .name = "set-netns", .has_arg = 1, .flag = 0, .val = OPT_SET_NETNS },
+    { .name = "resolv", .has_arg = 1, .flag = 0, .val = OPT_RESOLV },
+    { .name = "socket", .has_arg = 1, .flag = 0, .val = OPT_SOCKET },
+    { 0, 0, 0, 0 }
+  };
   const char *optstring = "hp:vsltf:";
   int opt, len;
-  char verbose = 0;
-  int ret = EXIT_SUCCESS;
-
   // Parse command line options
   if (argc <= 1)
     ERR("For the help message try: runnsctl --help");
@@ -260,7 +259,7 @@ int main(int argc, char **argv) {
         break;
       case 'f':
         if (hdr.op_mode == OP_MODE_NETNS) {
-            ERR("--forward-port and --set-netns mutually exclusive");
+          ERR("--forward-port and --set-netns mutually exclusive");
         }
         hdr.op_mode = OP_MODE_FWD_PORT;
         add_netns(optarg);
@@ -270,7 +269,7 @@ int main(int argc, char **argv) {
         break;
       case OPT_SET_NETNS:
         if (hdr.op_mode == OP_MODE_FWD_PORT) {
-            ERR("--forward-port and --set-netns mutually exclusive");
+          ERR("--forward-port and --set-netns mutually exclusive");
         }
         hdr.op_mode = OP_MODE_NETNS;
         netns = optarg;
@@ -290,17 +289,13 @@ int main(int argc, char **argv) {
         ERR("Wrong option: %c", (char)opt);
     }
   }
+}
 
-  // TODO: remove this debugging output
-#if 0
-  if (hdr.op_mode == OP_MODE_FWD_PORT) {
-    for (struct netns *p = ns_head; p != NULL; p = p->pnext) {
-      INFO("0x%x %s %s %d %d", *((int *)p->ip), p->netns, p->family == AF_INET ? "AF_INET" : "AF_INET6", p->proto, p->port);
-    }
-    exit(0);
-  }
-#endif
-
+// Don't define main() for unit tests
+#ifndef TAU_TEST
+int main(int argc, char **argv) {
+  parse_cmdline(argc, argv);
+  // Sanity checks
   if (hdr.op_mode == OP_MODE_FWD_PORT && !ns_head) {
     ERR("Nothing to forward");
   }
@@ -310,18 +305,17 @@ int main(int argc, char **argv) {
 
   // Output parameters in the case of verbose option
   if (netns && verbose) {
-    if (hdr.flag & (RUNNS_STOP | RUNNS_LIST)) { // flags related to runns
-                                                // daemon
-        char *str = NULL;
+    if (hdr.flag & (RUNNS_STOP | RUNNS_LIST)) { // flags related to runns daemon
+      char *str = NULL;
 
-        if (hdr.flag & RUNNS_STOP) str = "RUNNS_STOP";
-        if (hdr.flag & RUNNS_LIST) str = "RUNNS_LIST";
-        if (str)
-            printf("Command to runns daemon: %s\n", str);
+      if (hdr.flag & RUNNS_STOP) str = "RUNNS_STOP";
+      if (hdr.flag & RUNNS_LIST) str = "RUNNS_LIST";
+      if (str)
+        printf("Command to runns daemon: %s\n", str);
     } else {
-        printf("network namespace to switch is: %s\n"
-               "program to run: %s\n",
-               netns, prog);
+      printf("network namespace to switch is: %s\n"
+             "program to run: %s\n",
+             netns, prog);
     }
   }
 
@@ -332,13 +326,9 @@ int main(int argc, char **argv) {
   sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sockfd == -1) {
     ERR("Something gone very wrong, socket = %d", sockfd);
-    cleanup();
-    return ret;
   }
   if (connect(sockfd, (const struct sockaddr *)&addr, sizeof(addr)) == -1) {
     ERR("Can't connect to runns daemon");
-    cleanup();
-    return ret;
   }
   // Calculate number of non-options
   hdr.args_sz = argc - optind;
@@ -351,7 +341,7 @@ int main(int argc, char **argv) {
   // Stop daemon
   if (hdr.flag & RUNNS_STOP) {
     cleanup();
-    return ret;
+    return EXIT_SUCCESS;
   }
   // Print list of children and exit
   if (hdr.flag & RUNNS_LIST) {
@@ -365,7 +355,7 @@ int main(int argc, char **argv) {
       printf("%d\n", child.pid);
     }
     cleanup();
-    return ret;
+    return EXIT_SUCCESS;
   }
 
   switch (hdr.op_mode) {
@@ -377,6 +367,6 @@ int main(int argc, char **argv) {
   }
 
   cleanup();
-  return ret;
+  return EXIT_SUCCESS;
 }
 #endif
