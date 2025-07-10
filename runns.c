@@ -457,8 +457,13 @@ int do_netns(int data_sockfd) {
 
       // Unshare mount namespace
       if (resolv) {
-        if (unshare(CLONE_NEWNS) < 0) {
+        if (unshare(CLONE_NEWNS | CLONE_FS | CLONE_THREAD) < 0) {
           WARN("Can't unshare mount namespace, errno=%d", errno);
+          exit(EXIT_FAILURE);
+        }
+
+        if (mount("none", "/", NULL, MS_REC | MS_PRIVATE, NULL)) {
+          WARN("Can't unshare root, errno=%d", errno);
           exit(EXIT_FAILURE);
         }
 
