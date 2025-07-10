@@ -32,13 +32,13 @@ clean:
 	$(MAKE) -C tests/ clean
 
 .PHONY: install
-install: $(DAEMON) $(CLIENT) $(HELPER)
+install: $(DAEMON) $(CLIENT)
 	mkdir -p $(DESTDIR)/$(PREFIX)/bin
 	cp $^ $(DESTDIR)/$(PREFIX)/bin/
 	chmod 755 $(DESTDIR)/$(PREFIX)/bin/{$(subst $(_),$(comma),$^)}
 
 .PHONY: uninstall
-uninstall: $(CLIENT) $(DAEMON) $(HELPER)
+uninstall: $(CLIENT) $(DAEMON)
 	rm -f $(DESTDIR)/$(PREFIX)/bin/{$(subst $(_),$(comma),$^)}
 
 .PHONY: distclean
